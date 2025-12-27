@@ -1345,6 +1345,7 @@
       <!-- AI Service Selector -->
       <div class="ai-service-selector">
         <select id="aiServiceSelect" class="ai-service-dropdown">
+          <option value="" disabled selected>⚡ Select AI Assistant...</option>
           <option value="https://chat.openai.com">🤖 ChatGPT</option>
           <option value="https://gemini.google.com">✨ Google Gemini</option>
           <option value="https://claude.ai">🧠 Claude</option>
@@ -1353,6 +1354,7 @@
           <option value="https://huggingface.co/chat">🤗 HuggingChat</option>
           <option value="https://poe.com">💬 Poe</option>
           <option value="https://www.phind.com">👨‍💻 Phind (Dev)</option>
+          <option value="https://you.com">🔎 You.com</option>
         </select>
         <button class="ai-reload-btn" id="aiReloadBtn" title="Reload">↻</button>
       </div>
@@ -1605,11 +1607,7 @@
     }
 
     async function openAIPanel() {
-      const selectedUrl = aiServiceSelect.value;
-      
-      // Open AI panel via main process
-      await window.electron.aiPanel.open(selectedUrl);
-      
+      // Just show the panel UI - don't load any AI service yet
       aiPanel.classList.add('open');
       mainContent.classList.add('ai-open');
       aiBtn.classList.add('active');
@@ -1620,29 +1618,48 @@
       historySidebar.classList.remove('open');
       bookmarkBtn.classList.remove('active');
       historyBtn.classList.remove('active');
+      
+      // Reset dropdown to show placeholder
+      aiServiceSelect.selectedIndex = 0;
     }
 
     async function closeAIPanel() {
-      await window.electron.aiPanel.close();
+      if (aiServiceLoaded) {
+        await window.electron.aiPanel.close();
+      }
       
       aiPanel.classList.remove('open');
       mainContent.classList.remove('ai-open');
       aiBtn.classList.remove('active');
       aiPanelIsOpen = false;
+      aiServiceLoaded = false;
+      
+      // Reset dropdown
+      aiServiceSelect.selectedIndex = 0;
     }
 
+    let aiServiceLoaded = false;
+
     function setupAIPanel() {
-      // Service selector - change AI service
+      // Service selector - load selected AI service
       aiServiceSelect.addEventListener('change', async (e) => {
-        if (aiPanelIsOpen) {
-          await window.electron.aiPanel.setUrl(e.target.value);
-        }
+        const url = e.target.value;
+        if (!url) return;
+        
+        // Open the AI BrowserView with selected service
+        await window.electron.aiPanel.open(url);
+        aiServiceLoaded = true;
+        showToast(`Loading ${e.target.options[e.target.selectedIndex].text}...`);
       });
 
       // Reload button
       document.getElementById('aiReloadBtn').addEventListener('click', async () => {
-        await window.electron.aiPanel.reload();
-        showToast('🔄 Reloading AI service...');
+        if (aiServiceLoaded) {
+          await window.electron.aiPanel.reload();
+          showToast('🔄 Reloading AI service...');
+        } else {
+          showToast('⚡ Select an AI service first');
+        }
       });
 
       // Close/Minimize buttons
