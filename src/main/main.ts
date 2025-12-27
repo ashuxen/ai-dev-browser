@@ -7,8 +7,10 @@ import {
   BrowserView,
 } from 'electron';
 import path from 'path';
+import { BookmarkManager } from './bookmark-manager';
+import { HistoryManager } from './history-manager';
 
-console.log('🚀 AI Dev Browser starting...');
+console.log('🚀 FlashAppAI Browser starting...');
 
 // Handle creating/removing shortcuts on Windows
 if (process.platform === 'win32') {
@@ -24,7 +26,7 @@ if (process.platform === 'win32') {
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
 
-// Simple tab management
+// Tab interface
 interface Tab {
   id: string;
   url: string;
@@ -32,13 +34,20 @@ interface Tab {
   view: BrowserView;
 }
 
-class SimpleBrowser {
+class FlashAppAIBrowser {
   private mainWindow: BrowserWindow | null = null;
   private tabs: Map<string, Tab> = new Map();
   private activeTabId: string | null = null;
   private tabIdCounter = 0;
+  private sidebarWidth = 0;
+  
+  // Managers
+  private bookmarkManager: BookmarkManager;
+  private historyManager: HistoryManager;
 
   constructor() {
+    this.bookmarkManager = new BookmarkManager();
+    this.historyManager = new HistoryManager();
     this.init();
   }
 
@@ -76,11 +85,11 @@ class SimpleBrowser {
     this.mainWindow = new BrowserWindow({
       width: 1400,
       height: 900,
-      minWidth: 800,
+      minWidth: 900,
       minHeight: 600,
       titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
       trafficLightPosition: { x: 15, y: 15 },
-      backgroundColor: nativeTheme.shouldUseDarkColors ? '#1a1a2e' : '#ffffff',
+      backgroundColor: '#0a0a1a',
       webPreferences: {
         preload: path.join(__dirname, 'preload.js'),
         nodeIntegration: false,
@@ -97,7 +106,7 @@ class SimpleBrowser {
     // Create initial tab after UI loads
     setTimeout(() => {
       console.log('✅ Creating initial tab');
-      this.createTab('https://www.google.com');
+      this.createTab('https://flashappai.org');
     }, 300);
 
     this.mainWindow.on('resize', () => this.updateTabBounds());
@@ -108,21 +117,7 @@ class SimpleBrowser {
     console.log('✅ Main window created');
   }
 
-  private async loadURLWithRetry(window: BrowserWindow, url: string, retries = 10): Promise<void> {
-    for (let i = 0; i < retries; i++) {
-      try {
-        await window.loadURL(url);
-        console.log('✅ Dev server loaded successfully');
-        return;
-      } catch (error) {
-        console.log(`⏳ Waiting for dev server (attempt ${i + 1}/${retries})...`);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    }
-    console.error('❌ Failed to load dev server after retries');
-  }
-
-  private createTab(url: string = 'https://www.google.com'): string {
+  private createTab(url: string = 'https://flashappai.org'): string {
     if (!this.mainWindow) return '';
 
     const id = `tab-${++this.tabIdCounter}`;
@@ -141,11 +136,26 @@ class SimpleBrowser {
     // Setup view events
     view.webContents.on('did-navigate', (_e, navUrl) => {
       tab.url = navUrl;
+      this.addToHistory(navUrl, tab.title);
+      this.notifyTabUpdate();
+    });
+
+    view.webContents.on('did-navigate-in-page', (_e, navUrl) => {
+      tab.url = navUrl;
       this.notifyTabUpdate();
     });
 
     view.webContents.on('page-title-updated', (_e, title) => {
       tab.title = title;
+      this.addToHistory(tab.url, title);
+      this.notifyTabUpdate();
+    });
+
+    view.webContents.on('did-start-loading', () => {
+      this.notifyTabUpdate();
+    });
+
+    view.webContents.on('did-stop-loading', () => {
       this.notifyTabUpdate();
     });
 
@@ -153,6 +163,17 @@ class SimpleBrowser {
     this.switchToTab(id);
 
     return id;
+  }
+
+  private addToHistory(url: string, title: string) {
+    // Skip internal URLs and empty titles
+    if (!url || url.startsWith('about:') || url.startsWith('file:')) return;
+    
+    try {
+      this.historyManager.add({ url, title: title || url });
+    } catch (e) {
+      console.error('Failed to add to history:', e);
+    }
   }
 
   private switchToTab(tabId: string) {
@@ -210,9 +231,9 @@ class SimpleBrowser {
     const TOOLBAR_HEIGHT = 88; // Tab bar + address bar
 
     tab.view.setBounds({
-      x: 0,
+      x: this.sidebarWidth,
       y: TOOLBAR_HEIGHT,
-      width: bounds.width,
+      width: bounds.width - this.sidebarWidth,
       height: bounds.height - TOOLBAR_HEIGHT,
     });
   }
@@ -251,6 +272,13 @@ class SimpleBrowser {
     });
 
     ipcMain.handle('tab:navigate', (_e, url: string) => {
+      // Handle sidebar width update
+      if (url.startsWith('__sidebar:')) {
+        this.sidebarWidth = parseInt(url.split(':')[1]) || 0;
+        this.updateTabBounds();
+        return;
+      }
+
       if (!this.activeTabId) return;
       const tab = this.tabs.get(this.activeTabId);
       if (tab) {
@@ -295,31 +323,81 @@ class SimpleBrowser {
       }));
     });
 
-    // Bookmarks (simplified)
-    ipcMain.handle('bookmark:add', () => ({ id: '1', url: '', title: '' }));
-    ipcMain.handle('bookmark:remove', () => true);
-    ipcMain.handle('bookmark:get-all', () => []);
-    ipcMain.handle('bookmark:search', () => []);
+    // Bookmarks
+    ipcMain.handle('bookmark:add', (_e, bookmark: { url: string; title: string }) => {
+      return this.bookmarkManager.add(bookmark);
+    });
 
-    // History (simplified)
-    ipcMain.handle('history:add', () => ({}));
-    ipcMain.handle('history:get-all', () => []);
-    ipcMain.handle('history:search', () => []);
-    ipcMain.handle('history:clear', () => {});
+    ipcMain.handle('bookmark:remove', (_e, id: string) => {
+      return this.bookmarkManager.remove(id);
+    });
 
-    // Code-server (simplified)
+    ipcMain.handle('bookmark:get-all', () => {
+      return this.bookmarkManager.getAll();
+    });
+
+    ipcMain.handle('bookmark:search', (_e, query: string) => {
+      return this.bookmarkManager.search(query);
+    });
+
+    // History
+    ipcMain.handle('history:add', (_e, entry: { url: string; title: string }) => {
+      return this.historyManager.add(entry);
+    });
+
+    ipcMain.handle('history:get-all', () => {
+      return this.historyManager.getAll();
+    });
+
+    ipcMain.handle('history:search', (_e, query: string) => {
+      return this.historyManager.search(query);
+    });
+
+    ipcMain.handle('history:clear', () => {
+      this.historyManager.clear();
+    });
+
+    // Code-server (placeholder)
     ipcMain.handle('code-server:connect', () => false);
     ipcMain.handle('code-server:disconnect', () => {});
     ipcMain.handle('code-server:send-code', () => false);
     ipcMain.handle('code-server:status', () => ({ connected: false, url: null }));
 
-    // AI (simplified)
-    ipcMain.handle('ai:explain-code', () => ({ success: false, error: 'Not configured' }));
-    ipcMain.handle('ai:summarize-docs', () => ({ success: false, error: 'Not configured' }));
-    ipcMain.handle('ai:chat', () => ({ success: false, error: 'Not configured' }));
+    // AI (placeholder - responds with helpful message)
+    ipcMain.handle('ai:explain-code', () => ({
+      success: false,
+      error: 'AI not configured. Add your OpenAI or Anthropic API key in settings.'
+    }));
+
+    ipcMain.handle('ai:summarize-docs', () => ({
+      success: false,
+      error: 'AI not configured. Add your OpenAI or Anthropic API key in settings.'
+    }));
+
+    ipcMain.handle('ai:chat', (_e, message: string) => {
+      // Simple responses for demo
+      const responses: { [key: string]: string } = {
+        'hello': 'Hello! How can I help you with your development today?',
+        'hi': 'Hi there! I\'m ready to assist with code, documentation, or any development questions.',
+      };
+
+      const lowerMsg = message.toLowerCase();
+      
+      for (const [key, response] of Object.entries(responses)) {
+        if (lowerMsg.includes(key)) {
+          return { success: true, content: response };
+        }
+      }
+
+      return {
+        success: false,
+        error: 'To enable AI features, configure your API key:\n\n1. Get an API key from OpenAI or Anthropic\n2. Go to Settings > AI Configuration\n3. Enter your API key\n\nOnce configured, I can help you:\n• Explain code snippets\n• Summarize documentation\n• Debug issues\n• Suggest improvements'
+      };
+    });
+
     ipcMain.handle('ai:configure', () => {});
 
-    // OAuth (simplified)
+    // OAuth (placeholder)
     ipcMain.handle('oauth:status', () => ({}));
     ipcMain.handle('oauth:get-tokens', () => []);
 
@@ -331,187 +409,10 @@ class SimpleBrowser {
     console.log('✅ IPC handlers registered');
   }
 
-  private getEmbeddedUI(): string {
-    return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>AI Dev Browser</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #1a1a2e;
-      color: #e8e8f0;
-      height: 88px;
-      overflow: hidden;
-      -webkit-app-region: drag;
-    }
-    .toolbar {
-      display: flex;
-      align-items: center;
-      padding: 8px 12px;
-      gap: 8px;
-      background: #252538;
-      height: 44px;
-      -webkit-app-region: no-drag;
-    }
-    .tab-bar {
-      display: flex;
-      align-items: center;
-      padding: 8px 12px 0;
-      gap: 4px;
-      height: 44px;
-      padding-left: 80px;
-    }
-    .tab {
-      display: flex;
-      align-items: center;
-      padding: 8px 12px;
-      background: #252538;
-      border-radius: 8px 8px 0 0;
-      cursor: pointer;
-      max-width: 200px;
-      -webkit-app-region: no-drag;
-    }
-    .tab.active { background: #333; }
-    .tab-title {
-      flex: 1;
-      font-size: 12px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-right: 8px;
-    }
-    .tab-close {
-      width: 16px; height: 16px;
-      border: none; background: transparent;
-      color: #888; cursor: pointer;
-      border-radius: 4px; font-size: 14px;
-    }
-    .tab-close:hover { background: #444; color: white; }
-    .new-tab {
-      width: 28px; height: 28px;
-      border: none; background: transparent;
-      color: #888; cursor: pointer;
-      border-radius: 6px; font-size: 18px;
-      -webkit-app-region: no-drag;
-    }
-    .new-tab:hover { background: #333; color: white; }
-    .nav-btn {
-      width: 32px; height: 32px;
-      border: none; background: #1a1a2e;
-      color: #a0a0b8; border-radius: 6px;
-      cursor: pointer; font-size: 16px;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .nav-btn:hover { background: #333; color: white; }
-    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-    .url-bar {
-      flex: 1; height: 32px;
-      padding: 0 12px; border: none;
-      background: #1a1a2e; color: white;
-      border-radius: 6px; font-size: 14px;
-      outline: none;
-    }
-    .url-bar:focus { outline: 2px solid #6366f1; }
-  </style>
-</head>
-<body>
-  <div class="tab-bar" id="tabBar">
-    <button class="new-tab" id="newTab" title="New Tab">+</button>
-  </div>
-  <div class="toolbar">
-    <button class="nav-btn" id="backBtn" title="Back">←</button>
-    <button class="nav-btn" id="forwardBtn" title="Forward">→</button>
-    <button class="nav-btn" id="reloadBtn" title="Reload">↻</button>
-    <input type="text" class="url-bar" id="urlBar" placeholder="Enter URL or search..." />
-  </div>
-  <script>
-    const { ipcRenderer } = require('electron');
-    
-    // Elements
-    const tabBar = document.getElementById('tabBar');
-    const newTabBtn = document.getElementById('newTab');
-    const backBtn = document.getElementById('backBtn');
-    const forwardBtn = document.getElementById('forwardBtn');
-    const reloadBtn = document.getElementById('reloadBtn');
-    const urlBar = document.getElementById('urlBar');
-    
-    // Tab management
-    let tabs = [];
-    let activeTabId = null;
-    
-    function renderTabs() {
-      // Remove existing tabs (keep new tab button)
-      const existingTabs = tabBar.querySelectorAll('.tab');
-      existingTabs.forEach(t => t.remove());
-      
-      // Add tabs before the + button
-      tabs.forEach(tab => {
-        const tabEl = document.createElement('div');
-        tabEl.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
-        tabEl.innerHTML = \`
-          <span class="tab-title">\${tab.title || 'New Tab'}</span>
-          <button class="tab-close">×</button>
-        \`;
-        tabEl.addEventListener('click', (e) => {
-          if (!e.target.classList.contains('tab-close')) {
-            window.electron.tabs.switch(tab.id);
-          }
-        });
-        tabEl.querySelector('.tab-close').addEventListener('click', () => {
-          window.electron.tabs.close(tab.id);
-        });
-        tabBar.insertBefore(tabEl, newTabBtn);
-      });
-      
-      // Update URL bar
-      const activeTab = tabs.find(t => t.id === activeTabId);
-      if (activeTab) {
-        urlBar.value = activeTab.url;
-        backBtn.disabled = !activeTab.canGoBack;
-        forwardBtn.disabled = !activeTab.canGoForward;
-      }
-    }
-    
-    // Event listeners
-    newTabBtn.addEventListener('click', () => window.electron.tabs.create());
-    backBtn.addEventListener('click', () => window.electron.tabs.back());
-    forwardBtn.addEventListener('click', () => window.electron.tabs.forward());
-    reloadBtn.addEventListener('click', () => window.electron.tabs.reload());
-    
-    urlBar.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter' && urlBar.value.trim()) {
-        window.electron.tabs.navigate(urlBar.value.trim());
-      }
-    });
-    
-    // Listen for tab updates
-    window.electron.tabs.onUpdate((data) => {
-      tabs = data.tabs;
-      activeTabId = data.activeTabId;
-      renderTabs();
-    });
-    
-    // Initial load
-    window.electron.tabs.getAll().then(data => {
-      if (Array.isArray(data)) {
-        tabs = data;
-        activeTabId = data.find(t => t.isActive)?.id;
-        renderTabs();
-      }
-    });
-  </script>
-</body>
-</html>`;
-  }
-
   private setupMenu() {
     const template: Electron.MenuItemConstructorOptions[] = [
       {
-        label: 'AI Dev Browser',
+        label: 'FlashAppAI Browser',
         submenu: [
           { role: 'about' },
           { type: 'separator' },
@@ -532,6 +433,12 @@ class SimpleBrowser {
             click: () => {
               if (this.activeTabId) this.closeTab(this.activeTabId);
             },
+          },
+          { type: 'separator' },
+          {
+            label: 'New Window',
+            accelerator: 'CmdOrCtrl+N',
+            click: () => this.createWindow(),
           },
         ],
       },
@@ -562,6 +469,62 @@ class SimpleBrowser {
         ],
       },
       {
+        label: 'History',
+        submenu: [
+          {
+            label: 'Back',
+            accelerator: 'CmdOrCtrl+[',
+            click: () => {
+              const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
+              if (tab?.view.webContents.canGoBack()) {
+                tab.view.webContents.goBack();
+              }
+            },
+          },
+          {
+            label: 'Forward',
+            accelerator: 'CmdOrCtrl+]',
+            click: () => {
+              const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
+              if (tab?.view.webContents.canGoForward()) {
+                tab.view.webContents.goForward();
+              }
+            },
+          },
+          { type: 'separator' },
+          {
+            label: 'Show All History',
+            accelerator: 'CmdOrCtrl+Y',
+            click: () => {
+              this.mainWindow?.webContents.send('open-history');
+            },
+          },
+        ],
+      },
+      {
+        label: 'Bookmarks',
+        submenu: [
+          {
+            label: 'Bookmark This Page',
+            accelerator: 'CmdOrCtrl+D',
+            click: () => {
+              const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
+              if (tab) {
+                this.bookmarkManager.add({ url: tab.url, title: tab.title });
+                this.notifyTabUpdate();
+              }
+            },
+          },
+          {
+            label: 'Show All Bookmarks',
+            accelerator: 'CmdOrCtrl+Shift+B',
+            click: () => {
+              this.mainWindow?.webContents.send('open-bookmarks');
+            },
+          },
+        ],
+      },
+      {
         label: 'Window',
         submenu: [
           { role: 'minimize' },
@@ -575,4 +538,4 @@ class SimpleBrowser {
 }
 
 // Start the browser
-new SimpleBrowser();
+new FlashAppAIBrowser();

@@ -2,16 +2,58 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>AI Dev Browser</title>
+  <title>FlashAppAI Browser</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #1a1a2e;
-      color: #e8e8f0;
-      height: 88px;
-      overflow: hidden;
+    :root {
+      /* FlashAppAI Theme Colors */
+      --bg-primary: #0a0a1a;
+      --bg-secondary: #0f0f23;
+      --bg-tertiary: #151530;
+      --bg-elevated: #1a1a3a;
+      --accent-teal: #00d9ff;
+      --accent-purple: #a855f7;
+      --accent-magenta: #ec4899;
+      --gradient-start: #a855f7;
+      --gradient-end: #ec4899;
+      --text-primary: #ffffff;
+      --text-secondary: #a0a0c0;
+      --text-muted: #6b6b8a;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(0, 217, 255, 0.3);
+      --hover-bg: rgba(255, 255, 255, 0.05);
+      --active-bg: rgba(0, 217, 255, 0.1);
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ===== HEADER AREA ===== */
+    .header {
+      height: 88px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    /* Tab Bar */
     .tab-bar {
       display: flex;
       align-items: center;
@@ -19,88 +61,841 @@
       gap: 4px;
       height: 44px;
       padding-left: 80px;
-      background: #1a1a2e;
+      background: var(--bg-primary);
       -webkit-app-region: drag;
     }
+
     .tab {
       display: flex;
       align-items: center;
-      padding: 8px 12px;
-      background: #252538;
-      border-radius: 8px 8px 0 0;
+      padding: 8px 14px;
+      background: var(--bg-tertiary);
+      border-radius: 10px 10px 0 0;
       cursor: pointer;
-      max-width: 200px;
-      min-width: 100px;
+      max-width: 220px;
+      min-width: 120px;
       -webkit-app-region: no-drag;
+      transition: var(--transition);
+      border: 1px solid transparent;
+      border-bottom: none;
+      position: relative;
     }
-    .tab.active { background: #333; }
+
+    .tab:hover {
+      background: var(--bg-elevated);
+    }
+
+    .tab.active {
+      background: var(--bg-secondary);
+      border-color: var(--border-color);
+    }
+
+    .tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent-teal), var(--accent-purple));
+    }
+
+    .tab-favicon {
+      width: 16px;
+      height: 16px;
+      margin-right: 8px;
+      border-radius: 4px;
+      background: var(--bg-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: var(--accent-teal);
+    }
+
     .tab-title {
       flex: 1;
       font-size: 12px;
+      font-weight: 500;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      margin-right: 8px;
+      color: var(--text-secondary);
     }
+
+    .tab.active .tab-title {
+      color: var(--text-primary);
+    }
+
     .tab-close {
-      width: 16px; height: 16px;
-      border: none; background: transparent;
-      color: #888; cursor: pointer;
-      border-radius: 4px; font-size: 14px;
+      width: 18px;
+      height: 18px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 16px;
       line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 6px;
+      opacity: 0;
+      transition: var(--transition);
     }
-    .tab-close:hover { background: #444; color: white; }
+
+    .tab:hover .tab-close {
+      opacity: 1;
+    }
+
+    .tab-close:hover {
+      background: rgba(255, 100, 100, 0.2);
+      color: #ff6b6b;
+    }
+
     .new-tab {
-      width: 28px; height: 28px;
-      border: none; background: transparent;
-      color: #888; cursor: pointer;
-      border-radius: 6px; font-size: 20px;
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: 8px;
+      font-size: 20px;
       -webkit-app-region: no-drag;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .new-tab:hover { background: #333; color: white; }
+
+    .new-tab:hover {
+      background: var(--hover-bg);
+      color: var(--accent-teal);
+    }
+
+    /* Toolbar */
     .toolbar {
       display: flex;
       align-items: center;
-      padding: 8px 12px;
-      gap: 8px;
-      background: #252538;
+      padding: 8px 16px;
+      gap: 10px;
+      background: var(--bg-secondary);
       height: 44px;
     }
+
     .nav-btn {
-      width: 32px; height: 32px;
-      border: none; background: #1a1a2e;
-      color: #a0a0b8; border-radius: 6px;
-      cursor: pointer; font-size: 18px;
-      display: flex; align-items: center; justify-content: center;
+      width: 34px;
+      height: 34px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
     }
-    .nav-btn:hover { background: #333; color: white; }
-    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .nav-btn:hover:not(:disabled) {
+      background: var(--hover-bg);
+      color: var(--text-primary);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .url-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      background: var(--bg-tertiary);
+      border-radius: 10px;
+      padding: 0 14px;
+      height: 36px;
+      border: 1px solid var(--border-color);
+      transition: var(--transition);
+    }
+
+    .url-container:focus-within {
+      border-color: var(--accent-teal);
+      box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.15);
+    }
+
+    .url-icon {
+      color: var(--text-muted);
+      margin-right: 10px;
+      font-size: 14px;
+    }
+
     .url-bar {
-      flex: 1; height: 32px;
-      padding: 0 12px; border: none;
-      background: #1a1a2e; color: white;
-      border-radius: 6px; font-size: 14px;
+      flex: 1;
+      height: 100%;
+      border: none;
+      background: transparent;
+      color: var(--text-primary);
+      font-size: 14px;
       outline: none;
+      font-family: inherit;
     }
-    .url-bar:focus { outline: 2px solid #6366f1; }
-    .url-bar::placeholder { color: #6b6b80; }
+
+    .url-bar::placeholder {
+      color: var(--text-muted);
+    }
+
+    .toolbar-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .action-btn {
+      width: 34px;
+      height: 34px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+      position: relative;
+    }
+
+    .action-btn:hover {
+      background: var(--hover-bg);
+      color: var(--text-primary);
+    }
+
+    .action-btn.bookmarked {
+      color: var(--accent-teal);
+    }
+
+    .action-btn.active {
+      background: var(--active-bg);
+      color: var(--accent-teal);
+    }
+
+    /* ===== MAIN CONTENT ===== */
+    .main-content {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 320px;
+      background: var(--bg-secondary);
+      border-right: 1px solid var(--border-color);
+      display: none;
+      flex-direction: column;
+      animation: slideIn 0.2s ease;
+    }
+
+    .sidebar.open {
+      display: flex;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sidebar-title-icon {
+      color: var(--accent-teal);
+    }
+
+    .sidebar-close {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+
+    .sidebar-close:hover {
+      background: var(--hover-bg);
+      color: var(--text-primary);
+    }
+
+    .sidebar-search {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .search-input {
+      width: 100%;
+      height: 36px;
+      padding: 0 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 13px;
+      outline: none;
+      font-family: inherit;
+      transition: var(--transition);
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-teal);
+    }
+
+    .search-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .sidebar-content::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .sidebar-content::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .sidebar-content::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: var(--transition);
+      gap: 12px;
+    }
+
+    .sidebar-item:hover {
+      background: var(--hover-bg);
+    }
+
+    .sidebar-item-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: var(--accent-teal);
+      flex-shrink: 0;
+    }
+
+    .sidebar-item-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .sidebar-item-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sidebar-item-url {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+
+    .sidebar-item-time {
+      font-size: 11px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .sidebar-item-delete {
+      width: 24px;
+      height: 24px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 4px;
+      cursor: pointer;
+      opacity: 0;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .sidebar-item:hover .sidebar-item-delete {
+      opacity: 1;
+    }
+
+    .sidebar-item-delete:hover {
+      background: rgba(255, 100, 100, 0.2);
+      color: #ff6b6b;
+    }
+
+    .sidebar-empty {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+
+    .sidebar-empty-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+
+    .sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .sidebar-footer-btn {
+      width: 100%;
+      padding: 10px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit;
+    }
+
+    .sidebar-footer-btn:hover {
+      background: var(--hover-bg);
+      border-color: var(--accent-teal);
+      color: var(--text-primary);
+    }
+
+    /* AI Panel Styles */
+    .ai-sidebar .sidebar-content {
+      padding: 16px;
+    }
+
+    .ai-chat {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .ai-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+
+    .ai-message {
+      margin-bottom: 16px;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .ai-message-user {
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-magenta));
+      padding: 12px 16px;
+      border-radius: 16px 16px 4px 16px;
+      margin-left: 20px;
+    }
+
+    .ai-message-assistant {
+      background: var(--bg-tertiary);
+      padding: 12px 16px;
+      border-radius: 16px 16px 16px 4px;
+      margin-right: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .ai-message p {
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .ai-input-container {
+      display: flex;
+      gap: 8px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border-color);
+      margin-top: auto;
+    }
+
+    .ai-input {
+      flex: 1;
+      padding: 12px 14px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      color: var(--text-primary);
+      font-size: 13px;
+      outline: none;
+      resize: none;
+      font-family: inherit;
+      min-height: 44px;
+      max-height: 120px;
+    }
+
+    .ai-input:focus {
+      border-color: var(--accent-teal);
+    }
+
+    .ai-send {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, var(--accent-teal), var(--accent-purple));
+      border: none;
+      border-radius: 12px;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+
+    .ai-send:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 20px rgba(0, 217, 255, 0.3);
+    }
+
+    .ai-features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .ai-feature-btn {
+      padding: 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit;
+      text-align: left;
+    }
+
+    .ai-feature-btn:hover {
+      background: var(--hover-bg);
+      border-color: var(--accent-teal);
+      color: var(--text-primary);
+    }
+
+    .ai-feature-icon {
+      font-size: 18px;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    /* Browser View Placeholder */
+    .browser-view {
+      flex: 1;
+      background: var(--bg-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+
+    /* Logo */
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px;
+    }
+
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+    }
+
+    .logo-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .logo-text {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .logo-text span {
+      background: linear-gradient(90deg, var(--accent-teal), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Loading Spinner */
+    .loading {
+      width: 20px;
+      height: 20px;
+      border: 2px solid var(--border-color);
+      border-top-color: var(--accent-teal);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Section Headers */
+    .section-header {
+      padding: 12px 16px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    /* Tooltips */
+    [data-tooltip] {
+      position: relative;
+    }
+
+    [data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%) translateY(-4px);
+      padding: 6px 10px;
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      font-size: 11px;
+      border-radius: 6px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      box-shadow: var(--shadow);
+    }
+
+    [data-tooltip]:hover::after {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
-  <div class="tab-bar" id="tabBar">
-    <button class="new-tab" id="newTab" title="New Tab">+</button>
+  <!-- Header -->
+  <div class="header">
+    <!-- Tab Bar -->
+    <div class="tab-bar" id="tabBar">
+      <button class="new-tab" id="newTab" title="New Tab">+</button>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <button class="nav-btn" id="backBtn" data-tooltip="Back">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+      </button>
+      <button class="nav-btn" id="forwardBtn" data-tooltip="Forward">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+      </button>
+      <button class="nav-btn" id="reloadBtn" data-tooltip="Reload">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M23 4v6h-6M1 20v-6h6"/>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+        </svg>
+      </button>
+
+      <div class="url-container">
+        <span class="url-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+        </span>
+        <input type="text" class="url-bar" id="urlBar" placeholder="Search or enter URL..." />
+      </div>
+
+      <div class="toolbar-actions">
+        <button class="action-btn" id="bookmarkBtn" data-tooltip="Bookmark">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+          </svg>
+        </button>
+        <button class="action-btn" id="historyBtn" data-tooltip="History">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </button>
+        <button class="action-btn" id="aiBtn" data-tooltip="AI Assistant">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </button>
+      </div>
+    </div>
   </div>
-  <div class="toolbar">
-    <button class="nav-btn" id="backBtn" title="Back">←</button>
-    <button class="nav-btn" id="forwardBtn" title="Forward">→</button>
-    <button class="nav-btn" id="reloadBtn" title="Reload">↻</button>
-    <input type="text" class="url-bar" id="urlBar" placeholder="Enter URL or search..." />
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Bookmarks Sidebar -->
+    <div class="sidebar" id="bookmarksSidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">
+          <span class="sidebar-title-icon">★</span>
+          Bookmarks
+        </span>
+        <button class="sidebar-close" id="closeBookmarks">×</button>
+      </div>
+      <div class="sidebar-search">
+        <input type="text" class="search-input" id="bookmarkSearch" placeholder="Search bookmarks..." />
+      </div>
+      <div class="sidebar-content" id="bookmarksList">
+        <div class="sidebar-empty">
+          <div class="sidebar-empty-icon">★</div>
+          <p>No bookmarks yet</p>
+          <p style="font-size: 12px; margin-top: 8px;">Press the bookmark button to save pages</p>
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <button class="sidebar-footer-btn" id="addBookmarkBtn">+ Add Current Page</button>
+      </div>
+    </div>
+
+    <!-- History Sidebar -->
+    <div class="sidebar" id="historySidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">
+          <span class="sidebar-title-icon">◷</span>
+          History
+        </span>
+        <button class="sidebar-close" id="closeHistory">×</button>
+      </div>
+      <div class="sidebar-search">
+        <input type="text" class="search-input" id="historySearch" placeholder="Search history..." />
+      </div>
+      <div class="sidebar-content" id="historyList">
+        <div class="sidebar-empty">
+          <div class="sidebar-empty-icon">◷</div>
+          <p>No history yet</p>
+          <p style="font-size: 12px; margin-top: 8px;">Pages you visit will appear here</p>
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        <button class="sidebar-footer-btn" id="clearHistoryBtn">Clear All History</button>
+      </div>
+    </div>
+
+    <!-- AI Sidebar -->
+    <div class="sidebar ai-sidebar" id="aiSidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">
+          <span class="sidebar-title-icon">⚡</span>
+          AI Assistant
+        </span>
+        <button class="sidebar-close" id="closeAI">×</button>
+      </div>
+      <div class="sidebar-content">
+        <div class="ai-chat">
+          <div class="ai-features">
+            <button class="ai-feature-btn" id="explainCodeBtn">
+              <span class="ai-feature-icon">📝</span>
+              Explain Code
+            </button>
+            <button class="ai-feature-btn" id="summarizeBtn">
+              <span class="ai-feature-icon">📄</span>
+              Summarize Page
+            </button>
+            <button class="ai-feature-btn" id="suggestBtn">
+              <span class="ai-feature-icon">💡</span>
+              Suggestions
+            </button>
+            <button class="ai-feature-btn" id="debugBtn">
+              <span class="ai-feature-icon">🐛</span>
+              Debug Help
+            </button>
+          </div>
+          
+          <div class="ai-messages" id="aiMessages">
+            <div class="ai-message ai-message-assistant">
+              <p>👋 Hi! I'm your AI assistant. Ask me anything about code, documentation, or the page you're viewing.</p>
+            </div>
+          </div>
+          
+          <div class="ai-input-container">
+            <textarea class="ai-input" id="aiInput" placeholder="Ask me anything..." rows="1"></textarea>
+            <button class="ai-send" id="aiSend">→</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Browser View Placeholder -->
+    <div class="browser-view" id="browserView">
+      <!-- BrowserView will be positioned here by main process -->
+    </div>
   </div>
 
   <script>
-    console.log('🎨 Browser UI loading...');
-    console.log('window.electron:', window.electron);
-    
+    console.log('🎨 FlashAppAI Browser UI loading...');
+
     // Elements
     const tabBar = document.getElementById('tabBar');
     const newTabBtn = document.getElementById('newTab');
@@ -108,109 +903,394 @@
     const forwardBtn = document.getElementById('forwardBtn');
     const reloadBtn = document.getElementById('reloadBtn');
     const urlBar = document.getElementById('urlBar');
+    const bookmarkBtn = document.getElementById('bookmarkBtn');
+    const historyBtn = document.getElementById('historyBtn');
+    const aiBtn = document.getElementById('aiBtn');
     
+    // Sidebars
+    const bookmarksSidebar = document.getElementById('bookmarksSidebar');
+    const historySidebar = document.getElementById('historySidebar');
+    const aiSidebar = document.getElementById('aiSidebar');
+
     // State
     let tabs = [];
     let activeTabId = null;
-    
+    let bookmarks = [];
+    let history = [];
+    let currentUrl = '';
+
+    // ===== TAB MANAGEMENT =====
     function renderTabs() {
-      console.log('Rendering tabs:', tabs, 'active:', activeTabId);
-      
-      // Remove existing tabs (keep new tab button)
       const existingTabs = tabBar.querySelectorAll('.tab');
       existingTabs.forEach(t => t.remove());
-      
-      // Add tabs before the + button
+
       tabs.forEach(tab => {
         const tabEl = document.createElement('div');
         tabEl.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
+        
+        const favicon = tab.url ? getFaviconUrl(tab.url) : '';
+        const letter = (tab.title || 'N')[0].toUpperCase();
+        
         tabEl.innerHTML = `
+          <div class="tab-favicon">${favicon ? `<img src="${favicon}" width="14" height="14" onerror="this.style.display='none';this.parentNode.textContent='${letter}'">` : letter}</div>
           <span class="tab-title">${tab.title || 'New Tab'}</span>
           <button class="tab-close">×</button>
         `;
+        
         tabEl.addEventListener('click', (e) => {
           if (!e.target.classList.contains('tab-close')) {
             window.electron.tabs.switch(tab.id);
           }
         });
+        
         tabEl.querySelector('.tab-close').addEventListener('click', (e) => {
           e.stopPropagation();
           window.electron.tabs.close(tab.id);
         });
+        
         tabBar.insertBefore(tabEl, newTabBtn);
       });
-      
+
       // Update URL bar and nav buttons
       const activeTab = tabs.find(t => t.id === activeTabId);
       if (activeTab) {
         urlBar.value = activeTab.url || '';
+        currentUrl = activeTab.url || '';
         backBtn.disabled = !activeTab.canGoBack;
         forwardBtn.disabled = !activeTab.canGoForward;
+        updateBookmarkButton();
       }
     }
-    
-    // Wait for electron API to be available
+
+    function getFaviconUrl(url) {
+      try {
+        const urlObj = new URL(url);
+        return `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`;
+      } catch {
+        return '';
+      }
+    }
+
+    // ===== BOOKMARKS =====
+    function renderBookmarks(filter = '') {
+      const list = document.getElementById('bookmarksList');
+      const filtered = filter 
+        ? bookmarks.filter(b => b.title.toLowerCase().includes(filter.toLowerCase()) || b.url.toLowerCase().includes(filter.toLowerCase()))
+        : bookmarks;
+
+      if (filtered.length === 0) {
+        list.innerHTML = `
+          <div class="sidebar-empty">
+            <div class="sidebar-empty-icon">★</div>
+            <p>${filter ? 'No matching bookmarks' : 'No bookmarks yet'}</p>
+            <p style="font-size: 12px; margin-top: 8px;">${filter ? 'Try a different search' : 'Press the bookmark button to save pages'}</p>
+          </div>
+        `;
+        return;
+      }
+
+      list.innerHTML = filtered.map(b => `
+        <div class="sidebar-item" data-url="${b.url}">
+          <div class="sidebar-item-icon">★</div>
+          <div class="sidebar-item-content">
+            <div class="sidebar-item-title">${b.title}</div>
+            <div class="sidebar-item-url">${b.url}</div>
+          </div>
+          <button class="sidebar-item-delete" data-id="${b.id}">×</button>
+        </div>
+      `).join('');
+
+      list.querySelectorAll('.sidebar-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+          if (!e.target.classList.contains('sidebar-item-delete')) {
+            window.electron.tabs.navigate(item.dataset.url);
+          }
+        });
+      });
+
+      list.querySelectorAll('.sidebar-item-delete').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          await window.electron.bookmarks.remove(btn.dataset.id);
+          loadBookmarks();
+        });
+      });
+    }
+
+    async function loadBookmarks() {
+      bookmarks = await window.electron.bookmarks.getAll();
+      renderBookmarks(document.getElementById('bookmarkSearch').value);
+      updateBookmarkButton();
+    }
+
+    function updateBookmarkButton() {
+      const isBookmarked = bookmarks.some(b => b.url === currentUrl);
+      bookmarkBtn.classList.toggle('bookmarked', isBookmarked);
+      if (isBookmarked) {
+        bookmarkBtn.innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+          </svg>
+        `;
+      } else {
+        bookmarkBtn.innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+          </svg>
+        `;
+      }
+    }
+
+    // ===== HISTORY =====
+    function renderHistory(filter = '') {
+      const list = document.getElementById('historyList');
+      const filtered = filter
+        ? history.filter(h => h.title.toLowerCase().includes(filter.toLowerCase()) || h.url.toLowerCase().includes(filter.toLowerCase()))
+        : history;
+
+      if (filtered.length === 0) {
+        list.innerHTML = `
+          <div class="sidebar-empty">
+            <div class="sidebar-empty-icon">◷</div>
+            <p>${filter ? 'No matching history' : 'No history yet'}</p>
+            <p style="font-size: 12px; margin-top: 8px;">${filter ? 'Try a different search' : 'Pages you visit will appear here'}</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Group by date
+      const grouped = {};
+      filtered.slice(0, 100).forEach(h => {
+        const date = new Date(h.visitedAt).toLocaleDateString();
+        if (!grouped[date]) grouped[date] = [];
+        grouped[date].push(h);
+      });
+
+      list.innerHTML = Object.entries(grouped).map(([date, items]) => `
+        <div class="section-header">${date === new Date().toLocaleDateString() ? 'Today' : date}</div>
+        ${items.map(h => `
+          <div class="sidebar-item" data-url="${h.url}">
+            <div class="sidebar-item-icon">◷</div>
+            <div class="sidebar-item-content">
+              <div class="sidebar-item-title">${h.title || 'Untitled'}</div>
+              <div class="sidebar-item-url">${h.url}</div>
+            </div>
+            <span class="sidebar-item-time">${formatTime(h.visitedAt)}</span>
+          </div>
+        `).join('')}
+      `).join('');
+
+      list.querySelectorAll('.sidebar-item').forEach(item => {
+        item.addEventListener('click', () => {
+          window.electron.tabs.navigate(item.dataset.url);
+        });
+      });
+    }
+
+    function formatTime(timestamp) {
+      const date = new Date(timestamp);
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    async function loadHistory() {
+      history = await window.electron.history.getAll();
+      renderHistory(document.getElementById('historySearch').value);
+    }
+
+    // ===== AI CHAT =====
+    const aiMessages = document.getElementById('aiMessages');
+    const aiInput = document.getElementById('aiInput');
+
+    function addAIMessage(content, isUser = false) {
+      const msg = document.createElement('div');
+      msg.className = `ai-message ${isUser ? 'ai-message-user' : 'ai-message-assistant'}`;
+      msg.innerHTML = `<p>${content}</p>`;
+      aiMessages.appendChild(msg);
+      aiMessages.scrollTop = aiMessages.scrollHeight;
+    }
+
+    async function sendAIMessage() {
+      const message = aiInput.value.trim();
+      if (!message) return;
+
+      addAIMessage(message, true);
+      aiInput.value = '';
+
+      // Show typing indicator
+      const typingId = 'typing-' + Date.now();
+      const typingMsg = document.createElement('div');
+      typingMsg.id = typingId;
+      typingMsg.className = 'ai-message ai-message-assistant';
+      typingMsg.innerHTML = '<p><span class="loading"></span> Thinking...</p>';
+      aiMessages.appendChild(typingMsg);
+      aiMessages.scrollTop = aiMessages.scrollHeight;
+
+      try {
+        const response = await window.electron.ai.chat(message, currentUrl);
+        document.getElementById(typingId)?.remove();
+        
+        if (response.success) {
+          addAIMessage(response.content);
+        } else {
+          addAIMessage('⚠️ ' + (response.error || 'Unable to get response. Please configure your AI API key in settings.'));
+        }
+      } catch (err) {
+        document.getElementById(typingId)?.remove();
+        addAIMessage('⚠️ An error occurred. Please try again.');
+      }
+    }
+
+    // ===== SIDEBAR MANAGEMENT =====
+    function closeSidebars() {
+      bookmarksSidebar.classList.remove('open');
+      historySidebar.classList.remove('open');
+      aiSidebar.classList.remove('open');
+      bookmarkBtn.classList.remove('active');
+      historyBtn.classList.remove('active');
+      aiBtn.classList.remove('active');
+      updateBrowserViewWidth();
+    }
+
+    function toggleSidebar(sidebar, btn) {
+      const isOpen = sidebar.classList.contains('open');
+      closeSidebars();
+      if (!isOpen) {
+        sidebar.classList.add('open');
+        btn.classList.add('active');
+      }
+      updateBrowserViewWidth();
+    }
+
+    function updateBrowserViewWidth() {
+      // Notify main process about sidebar state
+      const isOpen = bookmarksSidebar.classList.contains('open') || 
+                     historySidebar.classList.contains('open') || 
+                     aiSidebar.classList.contains('open');
+      if (window.electron) {
+        window.electron.tabs.navigate('__sidebar:' + (isOpen ? '320' : '0'));
+      }
+    }
+
+    // ===== EVENT LISTENERS =====
     function init() {
       if (!window.electron) {
         console.log('Waiting for electron API...');
         setTimeout(init, 100);
         return;
       }
-      
-      console.log('✅ Electron API available');
-      
-      // Event listeners
-      newTabBtn.addEventListener('click', () => {
-        console.log('New tab clicked');
-        window.electron.tabs.create();
-      });
-      
-      backBtn.addEventListener('click', () => {
-        console.log('Back clicked');
-        window.electron.tabs.back();
-      });
-      
-      forwardBtn.addEventListener('click', () => {
-        console.log('Forward clicked');
-        window.electron.tabs.forward();
-      });
-      
-      reloadBtn.addEventListener('click', () => {
-        console.log('Reload clicked');
-        window.electron.tabs.reload();
-      });
-      
+
+      console.log('✅ FlashAppAI Browser initialized');
+
+      // Navigation
+      newTabBtn.addEventListener('click', () => window.electron.tabs.create());
+      backBtn.addEventListener('click', () => window.electron.tabs.back());
+      forwardBtn.addEventListener('click', () => window.electron.tabs.forward());
+      reloadBtn.addEventListener('click', () => window.electron.tabs.reload());
+
       urlBar.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && urlBar.value.trim()) {
-          console.log('Navigate to:', urlBar.value);
           window.electron.tabs.navigate(urlBar.value.trim());
         }
       });
-      
-      // Listen for tab updates from main process
+
+      // Sidebar toggles
+      bookmarkBtn.addEventListener('click', () => {
+        toggleSidebar(bookmarksSidebar, bookmarkBtn);
+        loadBookmarks();
+      });
+
+      historyBtn.addEventListener('click', () => {
+        toggleSidebar(historySidebar, historyBtn);
+        loadHistory();
+      });
+
+      aiBtn.addEventListener('click', () => {
+        toggleSidebar(aiSidebar, aiBtn);
+      });
+
+      // Sidebar close buttons
+      document.getElementById('closeBookmarks').addEventListener('click', closeSidebars);
+      document.getElementById('closeHistory').addEventListener('click', closeSidebars);
+      document.getElementById('closeAI').addEventListener('click', closeSidebars);
+
+      // Bookmark actions
+      document.getElementById('addBookmarkBtn').addEventListener('click', async () => {
+        const activeTab = tabs.find(t => t.id === activeTabId);
+        if (activeTab && activeTab.url) {
+          await window.electron.bookmarks.add({ url: activeTab.url, title: activeTab.title });
+          loadBookmarks();
+        }
+      });
+
+      document.getElementById('bookmarkSearch').addEventListener('input', (e) => {
+        renderBookmarks(e.target.value);
+      });
+
+      // History actions
+      document.getElementById('clearHistoryBtn').addEventListener('click', async () => {
+        if (confirm('Clear all browsing history?')) {
+          await window.electron.history.clear();
+          loadHistory();
+        }
+      });
+
+      document.getElementById('historySearch').addEventListener('input', (e) => {
+        renderHistory(e.target.value);
+      });
+
+      // AI actions
+      document.getElementById('aiSend').addEventListener('click', sendAIMessage);
+      aiInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendAIMessage();
+        }
+      });
+
+      document.getElementById('explainCodeBtn').addEventListener('click', () => {
+        aiInput.value = 'Explain the code on this page';
+        sendAIMessage();
+      });
+
+      document.getElementById('summarizeBtn').addEventListener('click', () => {
+        aiInput.value = 'Summarize the content of this page';
+        sendAIMessage();
+      });
+
+      document.getElementById('suggestBtn').addEventListener('click', () => {
+        aiInput.value = 'Suggest improvements for this code';
+        sendAIMessage();
+      });
+
+      document.getElementById('debugBtn').addEventListener('click', () => {
+        aiInput.value = 'Help me debug issues with this code';
+        sendAIMessage();
+      });
+
+      // Listen for tab updates
       window.electron.tabs.onUpdate((data) => {
-        console.log('Tab update received:', data);
         tabs = data.tabs || [];
         activeTabId = data.activeTabId;
         renderTabs();
       });
-      
+
       // Initial load
       window.electron.tabs.getAll().then(data => {
-        console.log('Initial tabs:', data);
         if (Array.isArray(data)) {
           tabs = data;
           const active = data.find(t => t.isActive);
           activeTabId = active?.id || null;
           renderTabs();
         }
-      }).catch(err => {
-        console.error('Error getting tabs:', err);
       });
+
+      // Load initial data
+      loadBookmarks();
+      loadHistory();
     }
-    
+
     init();
   </script>
 </body>
 </html>
-
