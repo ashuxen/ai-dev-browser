@@ -1,0 +1,99 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  background: var(--bg-primary);
+}
+
+.title-bar-spacer {
+  height: 0;
+}
+
+/* macOS title bar spacing */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  .app.darwin .title-bar-spacer {
+    height: 28px;
+    -webkit-app-region: drag;
+  }
+}
+
+.main-content {
+  flex: 1;
+  position: relative;
+  display: flex;
+  overflow: hidden;
+}
+
+.browser-view-container {
+  flex: 1;
+  position: relative;
+  /* BrowserView is rendered by main process */
+}
+
+/* Loading state */
+.browser-view-container.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--bg-tertiary);
+  border-top-color: var(--accent-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* Empty state */
+.browser-view-container.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 24px;
+  color: var(--text-muted);
+}
+
+.browser-view-container.empty svg {
+  width: 64px;
+  height: 64px;
+  opacity: 0.5;
+}
+
+.browser-view-container.empty p {
+  font-size: 16px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .ai-panel {
+    width: 350px;
+  }
+  
+  .sidebar {
+    width: 280px;
+  }
+}
+
+@media (max-width: 900px) {
+  .ai-panel {
+    position: fixed;
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  .sidebar {
+    position: fixed;
+    width: 100%;
+    max-width: 320px;
+  }
+}
+
