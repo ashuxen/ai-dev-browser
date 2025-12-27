@@ -24,19 +24,23 @@ interface BookmarkState {
   folders: BookmarkFolder[];
 }
 
+interface StoreSchema {
+  bookmarkState: BookmarkState;
+}
+
 export class BookmarkManager {
-  private store: Store<{ bookmarkState: BookmarkState }>;
+  private store: Store<StoreSchema>;
 
   constructor() {
-    this.store = new Store({
+    this.store = new Store<StoreSchema>({
       name: 'bookmarks',
       defaults: {
         bookmarkState: {
-          bookmarks: [],
+          bookmarks: [] as Bookmark[],
           folders: [
             { id: 'toolbar', name: 'Bookmarks Bar', createdAt: Date.now() },
             { id: 'other', name: 'Other Bookmarks', createdAt: Date.now() },
-          ],
+          ] as BookmarkFolder[],
         },
       },
     });

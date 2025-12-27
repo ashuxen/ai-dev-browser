@@ -1,10 +1,8 @@
 import { autoUpdater } from 'electron-updater';
 import { BrowserWindow, dialog, ipcMain } from 'electron';
-import log from 'electron-log';
 
-// Configure logging
-autoUpdater.logger = log;
-(autoUpdater.logger as typeof log).transports.file.level = 'info';
+// Configure logging (use console in dev, electron-log can be added for production)
+autoUpdater.logger = console;
 
 export function setupAutoUpdater(mainWindow: BrowserWindow): void {
   // Don't check for updates in development
