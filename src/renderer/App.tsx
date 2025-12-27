@@ -30,6 +30,8 @@ interface AppState {
     connected: boolean;
     url: string | null;
   };
+  isLoading: boolean;
+  error: string | null;
 }
 
 const App: React.FC = () => {
@@ -45,6 +47,8 @@ const App: React.FC = () => {
       connected: false,
       url: null,
     },
+    isLoading: true,
+    error: null,
   });
 
   // Initialize app
@@ -55,6 +59,7 @@ const App: React.FC = () => {
       // Check if electron API is available
       if (!window.electron) {
         console.error('❌ window.electron is not available!');
+        setState(prev => ({ ...prev, isLoading: false, error: 'Electron API not available' }));
         return;
       }
       
@@ -79,11 +84,12 @@ const App: React.FC = () => {
         // Get code-server status
         const codeServerStatus = await window.electron.codeServer.status();
         console.log('🔌 Code-server status:', codeServerStatus);
-        setState(prev => ({ ...prev, codeServerStatus }));
+        setState(prev => ({ ...prev, codeServerStatus, isLoading: false }));
         
         console.log('✅ App initialized successfully');
       } catch (error) {
         console.error('❌ Error initializing app:', error);
+        setState(prev => ({ ...prev, isLoading: false, error: String(error) }));
       }
     };
 
@@ -156,6 +162,22 @@ const App: React.FC = () => {
   }, []);
 
   const activeTab = state.tabs.find(t => t.id === state.activeTabId);
+
+  // Show loading or error state
+  if (state.error) {
+    return (
+      <div style={{ 
+        padding: '20px', 
+        color: 'red', 
+        background: '#1a1a2e',
+        height: '100%'
+      }}>
+        <h2>Error Loading Browser</h2>
+        <p>{state.error}</p>
+        <p>Check the DevTools console for more details.</p>
+      </div>
+    );
+  }
 
   return (
     <div className={`app ${state.isDarkMode ? 'dark' : 'light'}`}>

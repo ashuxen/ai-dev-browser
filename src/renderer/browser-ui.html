@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>AI Dev Browser</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #e8e8f0;
+      height: 88px;
+      overflow: hidden;
+    }
+    .tab-bar {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px 0;
+      gap: 4px;
+      height: 44px;
+      padding-left: 80px;
+      background: #1a1a2e;
+      -webkit-app-region: drag;
+    }
+    .tab {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      background: #252538;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      max-width: 200px;
+      min-width: 100px;
+      -webkit-app-region: no-drag;
+    }
+    .tab.active { background: #333; }
+    .tab-title {
+      flex: 1;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-right: 8px;
+    }
+    .tab-close {
+      width: 16px; height: 16px;
+      border: none; background: transparent;
+      color: #888; cursor: pointer;
+      border-radius: 4px; font-size: 14px;
+      line-height: 1;
+    }
+    .tab-close:hover { background: #444; color: white; }
+    .new-tab {
+      width: 28px; height: 28px;
+      border: none; background: transparent;
+      color: #888; cursor: pointer;
+      border-radius: 6px; font-size: 20px;
+      -webkit-app-region: no-drag;
+    }
+    .new-tab:hover { background: #333; color: white; }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      gap: 8px;
+      background: #252538;
+      height: 44px;
+    }
+    .nav-btn {
+      width: 32px; height: 32px;
+      border: none; background: #1a1a2e;
+      color: #a0a0b8; border-radius: 6px;
+      cursor: pointer; font-size: 18px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-btn:hover { background: #333; color: white; }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .url-bar {
+      flex: 1; height: 32px;
+      padding: 0 12px; border: none;
+      background: #1a1a2e; color: white;
+      border-radius: 6px; font-size: 14px;
+      outline: none;
+    }
+    .url-bar:focus { outline: 2px solid #6366f1; }
+    .url-bar::placeholder { color: #6b6b80; }
+  </style>
+</head>
+<body>
+  <div class="tab-bar" id="tabBar">
+    <button class="new-tab" id="newTab" title="New Tab">+</button>
+  </div>
+  <div class="toolbar">
+    <button class="nav-btn" id="backBtn" title="Back">←</button>
+    <button class="nav-btn" id="forwardBtn" title="Forward">→</button>
+    <button class="nav-btn" id="reloadBtn" title="Reload">↻</button>
+    <input type="text" class="url-bar" id="urlBar" placeholder="Enter URL or search..." />
+  </div>
+
+  <script>
+    console.log('🎨 Browser UI loading...');
+    console.log('window.electron:', window.electron);
+    
+    // Elements
+    const tabBar = document.getElementById('tabBar');
+    const newTabBtn = document.getElementById('newTab');
+    const backBtn = document.getElementById('backBtn');
+    const forwardBtn = document.getElementById('forwardBtn');
+    const reloadBtn = document.getElementById('reloadBtn');
+    const urlBar = document.getElementById('urlBar');
+    
+    // State
+    let tabs = [];
+    let activeTabId = null;
+    
+    function renderTabs() {
+      console.log('Rendering tabs:', tabs, 'active:', activeTabId);
+      
+      // Remove existing tabs (keep new tab button)
+      const existingTabs = tabBar.querySelectorAll('.tab');
+      existingTabs.forEach(t => t.remove());
+      
+      // Add tabs before the + button
+      tabs.forEach(tab => {
+        const tabEl = document.createElement('div');
+        tabEl.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
+        tabEl.innerHTML = `
+          <span class="tab-title">${tab.title || 'New Tab'}</span>
+          <button class="tab-close">×</button>
+        `;
+        tabEl.addEventListener('click', (e) => {
+          if (!e.target.classList.contains('tab-close')) {
+            window.electron.tabs.switch(tab.id);
+          }
+        });
+        tabEl.querySelector('.tab-close').addEventListener('click', (e) => {
+          e.stopPropagation();
+          window.electron.tabs.close(tab.id);
+        });
+        tabBar.insertBefore(tabEl, newTabBtn);
+      });
+      
+      // Update URL bar and nav buttons
+      const activeTab = tabs.find(t => t.id === activeTabId);
+      if (activeTab) {
+        urlBar.value = activeTab.url || '';
+        backBtn.disabled = !activeTab.canGoBack;
+        forwardBtn.disabled = !activeTab.canGoForward;
+      }
+    }
+    
+    // Wait for electron API to be available
+    function init() {
+      if (!window.electron) {
+        console.log('Waiting for electron API...');
+        setTimeout(init, 100);
+        return;
+      }
+      
+      console.log('✅ Electron API available');
+      
+      // Event listeners
+      newTabBtn.addEventListener('click', () => {
+        console.log('New tab clicked');
+        window.electron.tabs.create();
+      });
+      
+      backBtn.addEventListener('click', () => {
+        console.log('Back clicked');
+        window.electron.tabs.back();
+      });
+      
+      forwardBtn.addEventListener('click', () => {
+        console.log('Forward clicked');
+        window.electron.tabs.forward();
+      });
+      
+      reloadBtn.addEventListener('click', () => {
+        console.log('Reload clicked');
+        window.electron.tabs.reload();
+      });
+      
+      urlBar.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && urlBar.value.trim()) {
+          console.log('Navigate to:', urlBar.value);
+          window.electron.tabs.navigate(urlBar.value.trim());
+        }
+      });
+      
+      // Listen for tab updates from main process
+      window.electron.tabs.onUpdate((data) => {
+        console.log('Tab update received:', data);
+        tabs = data.tabs || [];
+        activeTabId = data.activeTabId;
+        renderTabs();
+      });
+      
+      // Initial load
+      window.electron.tabs.getAll().then(data => {
+        console.log('Initial tabs:', data);
+        if (Array.isArray(data)) {
+          tabs = data;
+          const active = data.find(t => t.isActive);
+          activeTabId = active?.id || null;
+          renderTabs();
+        }
+      }).catch(err => {
+        console.error('Error getting tabs:', err);
+      });
+    }
+    
+    init();
+  </script>
+</body>
+</html>
+

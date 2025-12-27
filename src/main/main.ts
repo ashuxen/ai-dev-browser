@@ -2,65 +2,47 @@ import {
   app,
   BrowserWindow,
   ipcMain,
-  session,
   Menu,
-  shell,
   nativeTheme,
-  dialog,
-  protocol,
+  BrowserView,
 } from 'electron';
 import path from 'path';
 
-console.log('🚀 Main process starting...');
-console.log('📍 __dirname:', __dirname);
-console.log('🖥️ Platform:', process.platform);
-import { OAuthBridge } from './oauth-bridge';
-import { CodeServerIntegration } from './code-server-integration';
-import { TabManager } from './tab-manager';
-import { BookmarkManager } from './bookmark-manager';
-import { HistoryManager } from './history-manager';
-import { DownloadManager } from './download-manager';
-import { AIService } from '../services/ai-service';
-import { setupAutoUpdater } from './auto-updater';
+console.log('🚀 AI Dev Browser starting...');
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
-// Only run this check on Windows
+// Handle creating/removing shortcuts on Windows
 if (process.platform === 'win32') {
   try {
     if (require('electron-squirrel-startup')) {
       app.quit();
     }
   } catch (e) {
-    // Ignore if module not found
+    // Ignore
   }
 }
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
 
-class AIDevBrowser {
+// Simple tab management
+interface Tab {
+  id: string;
+  url: string;
+  title: string;
+  view: BrowserView;
+}
+
+class SimpleBrowser {
   private mainWindow: BrowserWindow | null = null;
-  private oauthBridge: OAuthBridge;
-  private codeServerIntegration: CodeServerIntegration;
-  private tabManager: TabManager;
-  private bookmarkManager: BookmarkManager;
-  private historyManager: HistoryManager;
-  private downloadManager: DownloadManager;
-  private aiService: AIService;
+  private tabs: Map<string, Tab> = new Map();
+  private activeTabId: string | null = null;
+  private tabIdCounter = 0;
 
   constructor() {
-    this.oauthBridge = new OAuthBridge();
-    this.codeServerIntegration = new CodeServerIntegration();
-    this.tabManager = new TabManager();
-    this.bookmarkManager = new BookmarkManager();
-    this.historyManager = new HistoryManager();
-    this.downloadManager = new DownloadManager();
-    this.aiService = new AIService();
-
-    this.setupApp();
+    this.init();
   }
 
-  private setupApp(): void {
+  private init() {
     // Ensure single instance
     const gotTheLock = app.requestSingleInstanceLock();
     if (!gotTheLock) {
@@ -68,32 +50,11 @@ class AIDevBrowser {
       return;
     }
 
-    app.on('second-instance', (_event, commandLine) => {
-      if (this.mainWindow) {
-        if (this.mainWindow.isMinimized()) this.mainWindow.restore();
-        this.mainWindow.focus();
-        
-        // Handle URLs passed to second instance
-        const url = commandLine.find(arg => arg.startsWith('http'));
-        if (url) {
-          this.tabManager.createTab(url);
-        }
-      }
-    });
-
     app.whenReady().then(() => {
-      this.registerProtocols();
+      console.log('✅ App ready');
       this.createWindow();
-      this.setupMenu();
       this.setupIPC();
-      this.setupOAuthInterception();
-      setupAutoUpdater(this.mainWindow!);
-
-      app.on('activate', () => {
-        if (BrowserWindow.getAllWindows().length === 0) {
-          this.createWindow();
-        }
-      });
+      this.setupMenu();
     });
 
     app.on('window-all-closed', () => {
@@ -102,38 +63,16 @@ class AIDevBrowser {
       }
     });
 
-    // Security settings
-    app.on('web-contents-created', (_event, contents) => {
-      contents.on('will-navigate', (event, navigationUrl) => {
-        const parsedUrl = new URL(navigationUrl);
-        // Allow navigation within the app
-        if (parsedUrl.origin !== 'file://') {
-          event.preventDefault();
-          this.tabManager.navigateTo(navigationUrl);
-        }
-      });
-
-      contents.setWindowOpenHandler(({ url }) => {
-        // Open external links in new tab
-        this.tabManager.createTab(url);
-        return { action: 'deny' };
-      });
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        this.createWindow();
+      }
     });
   }
 
-  private registerProtocols(): void {
-    // Register custom protocol for OAuth callbacks
-    protocol.registerHttpProtocol('aidevbrowser', (request, callback) => {
-      this.oauthBridge.handleCallback(request.url);
-      callback({ url: 'about:blank' });
-    });
-
-    // Handle vscode:// protocol
-    app.setAsDefaultProtocolClient('vscode');
-    app.setAsDefaultProtocolClient('aidevbrowser');
-  }
-
-  private createWindow(): void {
+  private async createWindow() {
+    console.log('📱 Creating main window...');
+    
     this.mainWindow = new BrowserWindow({
       width: 1400,
       height: 900,
@@ -141,58 +80,440 @@ class AIDevBrowser {
       minHeight: 600,
       titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
       trafficLightPosition: { x: 15, y: 15 },
-      frame: process.platform !== 'darwin',
       backgroundColor: nativeTheme.shouldUseDarkColors ? '#1a1a2e' : '#ffffff',
       webPreferences: {
         preload: path.join(__dirname, 'preload.js'),
         nodeIntegration: false,
         contextIsolation: true,
-        sandbox: false,
         webviewTag: true,
-        webSecurity: true,
       },
-      icon: path.join(__dirname, '../../assets/icons/icon.png'),
     });
 
-    // Load the main window
-    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-      this.mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
-    } else {
-      this.mainWindow.loadFile(
-        path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`)
-      );
-    }
+    // Load the browser UI HTML file directly from src
+    const uiPath = path.join(app.getAppPath(), 'src/renderer/browser-ui.html');
+    console.log('📦 Loading UI from:', uiPath);
+    await this.mainWindow.loadFile(uiPath);
 
-    // Open DevTools (always for now to debug)
-    this.mainWindow.webContents.openDevTools({ mode: 'right' });
+    // Create initial tab after UI loads
+    setTimeout(() => {
+      console.log('✅ Creating initial tab');
+      this.createTab('https://www.google.com');
+    }, 300);
 
+    this.mainWindow.on('resize', () => this.updateTabBounds());
     this.mainWindow.on('closed', () => {
       this.mainWindow = null;
     });
 
-    // Initialize managers with main window
-    this.tabManager.setMainWindow(this.mainWindow);
-    this.downloadManager.setMainWindow(this.mainWindow);
+    console.log('✅ Main window created');
   }
 
-  private setupMenu(): void {
+  private async loadURLWithRetry(window: BrowserWindow, url: string, retries = 10): Promise<void> {
+    for (let i = 0; i < retries; i++) {
+      try {
+        await window.loadURL(url);
+        console.log('✅ Dev server loaded successfully');
+        return;
+      } catch (error) {
+        console.log(`⏳ Waiting for dev server (attempt ${i + 1}/${retries})...`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    console.error('❌ Failed to load dev server after retries');
+  }
+
+  private createTab(url: string = 'https://www.google.com'): string {
+    if (!this.mainWindow) return '';
+
+    const id = `tab-${++this.tabIdCounter}`;
+    console.log(`📑 Creating tab ${id}: ${url}`);
+
+    const view = new BrowserView({
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+      },
+    });
+
+    const tab: Tab = { id, url, title: 'New Tab', view };
+    this.tabs.set(id, tab);
+
+    // Setup view events
+    view.webContents.on('did-navigate', (_e, navUrl) => {
+      tab.url = navUrl;
+      this.notifyTabUpdate();
+    });
+
+    view.webContents.on('page-title-updated', (_e, title) => {
+      tab.title = title;
+      this.notifyTabUpdate();
+    });
+
+    view.webContents.loadURL(url);
+    this.switchToTab(id);
+
+    return id;
+  }
+
+  private switchToTab(tabId: string) {
+    if (!this.mainWindow) return;
+
+    // Remove current view
+    if (this.activeTabId) {
+      const currentTab = this.tabs.get(this.activeTabId);
+      if (currentTab) {
+        this.mainWindow.removeBrowserView(currentTab.view);
+      }
+    }
+
+    // Add new view
+    const newTab = this.tabs.get(tabId);
+    if (newTab) {
+      this.mainWindow.addBrowserView(newTab.view);
+      this.activeTabId = tabId;
+      this.updateTabBounds();
+      this.notifyTabUpdate();
+    }
+  }
+
+  private closeTab(tabId: string) {
+    const tab = this.tabs.get(tabId);
+    if (!tab || !this.mainWindow) return;
+
+    if (this.activeTabId === tabId) {
+      this.mainWindow.removeBrowserView(tab.view);
+    }
+
+    (tab.view.webContents as any).destroy?.();
+    this.tabs.delete(tabId);
+
+    // Switch to another tab or create new one
+    if (this.activeTabId === tabId) {
+      const remaining = Array.from(this.tabs.keys());
+      if (remaining.length > 0) {
+        this.switchToTab(remaining[0]);
+      } else {
+        this.createTab();
+      }
+    }
+
+    this.notifyTabUpdate();
+  }
+
+  private updateTabBounds() {
+    if (!this.mainWindow || !this.activeTabId) return;
+
+    const tab = this.tabs.get(this.activeTabId);
+    if (!tab) return;
+
+    const bounds = this.mainWindow.getBounds();
+    const TOOLBAR_HEIGHT = 88; // Tab bar + address bar
+
+    tab.view.setBounds({
+      x: 0,
+      y: TOOLBAR_HEIGHT,
+      width: bounds.width,
+      height: bounds.height - TOOLBAR_HEIGHT,
+    });
+  }
+
+  private notifyTabUpdate() {
+    if (!this.mainWindow) return;
+
+    const tabsData = Array.from(this.tabs.values()).map(t => ({
+      id: t.id,
+      url: t.url,
+      title: t.title,
+      isActive: t.id === this.activeTabId,
+      canGoBack: t.view.webContents.canGoBack(),
+      canGoForward: t.view.webContents.canGoForward(),
+      isLoading: t.view.webContents.isLoading(),
+    }));
+
+    this.mainWindow.webContents.send('tabs-updated', {
+      tabs: tabsData,
+      activeTabId: this.activeTabId,
+    });
+  }
+
+  private setupIPC() {
+    // Tab management
+    ipcMain.handle('tab:create', (_e, url?: string) => {
+      return this.createTab(url);
+    });
+
+    ipcMain.handle('tab:close', (_e, tabId: string) => {
+      this.closeTab(tabId);
+    });
+
+    ipcMain.handle('tab:switch', (_e, tabId: string) => {
+      this.switchToTab(tabId);
+    });
+
+    ipcMain.handle('tab:navigate', (_e, url: string) => {
+      if (!this.activeTabId) return;
+      const tab = this.tabs.get(this.activeTabId);
+      if (tab) {
+        // Add protocol if missing
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          url = url.includes('.') ? `https://${url}` : `https://www.google.com/search?q=${encodeURIComponent(url)}`;
+        }
+        tab.view.webContents.loadURL(url);
+      }
+    });
+
+    ipcMain.handle('tab:back', () => {
+      const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
+      if (tab?.view.webContents.canGoBack()) {
+        tab.view.webContents.goBack();
+      }
+    });
+
+    ipcMain.handle('tab:forward', () => {
+      const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
+      if (tab?.view.webContents.canGoForward()) {
+        tab.view.webContents.goForward();
+      }
+    });
+
+    ipcMain.handle('tab:reload', () => {
+      const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
+      if (tab) {
+        tab.view.webContents.reload();
+      }
+    });
+
+    ipcMain.handle('tab:get-all', () => {
+      return Array.from(this.tabs.values()).map(t => ({
+        id: t.id,
+        url: t.url,
+        title: t.title,
+        isActive: t.id === this.activeTabId,
+        canGoBack: t.view.webContents.canGoBack(),
+        canGoForward: t.view.webContents.canGoForward(),
+        isLoading: t.view.webContents.isLoading(),
+      }));
+    });
+
+    // Bookmarks (simplified)
+    ipcMain.handle('bookmark:add', () => ({ id: '1', url: '', title: '' }));
+    ipcMain.handle('bookmark:remove', () => true);
+    ipcMain.handle('bookmark:get-all', () => []);
+    ipcMain.handle('bookmark:search', () => []);
+
+    // History (simplified)
+    ipcMain.handle('history:add', () => ({}));
+    ipcMain.handle('history:get-all', () => []);
+    ipcMain.handle('history:search', () => []);
+    ipcMain.handle('history:clear', () => {});
+
+    // Code-server (simplified)
+    ipcMain.handle('code-server:connect', () => false);
+    ipcMain.handle('code-server:disconnect', () => {});
+    ipcMain.handle('code-server:send-code', () => false);
+    ipcMain.handle('code-server:status', () => ({ connected: false, url: null }));
+
+    // AI (simplified)
+    ipcMain.handle('ai:explain-code', () => ({ success: false, error: 'Not configured' }));
+    ipcMain.handle('ai:summarize-docs', () => ({ success: false, error: 'Not configured' }));
+    ipcMain.handle('ai:chat', () => ({ success: false, error: 'Not configured' }));
+    ipcMain.handle('ai:configure', () => {});
+
+    // OAuth (simplified)
+    ipcMain.handle('oauth:status', () => ({}));
+    ipcMain.handle('oauth:get-tokens', () => []);
+
+    // App info
+    ipcMain.handle('app:version', () => app.getVersion());
+    ipcMain.handle('app:platform', () => process.platform);
+    ipcMain.handle('app:is-dark-mode', () => nativeTheme.shouldUseDarkColors);
+
+    console.log('✅ IPC handlers registered');
+  }
+
+  private getEmbeddedUI(): string {
+    return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>AI Dev Browser</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #e8e8f0;
+      height: 88px;
+      overflow: hidden;
+      -webkit-app-region: drag;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      gap: 8px;
+      background: #252538;
+      height: 44px;
+      -webkit-app-region: no-drag;
+    }
+    .tab-bar {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px 0;
+      gap: 4px;
+      height: 44px;
+      padding-left: 80px;
+    }
+    .tab {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      background: #252538;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      max-width: 200px;
+      -webkit-app-region: no-drag;
+    }
+    .tab.active { background: #333; }
+    .tab-title {
+      flex: 1;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-right: 8px;
+    }
+    .tab-close {
+      width: 16px; height: 16px;
+      border: none; background: transparent;
+      color: #888; cursor: pointer;
+      border-radius: 4px; font-size: 14px;
+    }
+    .tab-close:hover { background: #444; color: white; }
+    .new-tab {
+      width: 28px; height: 28px;
+      border: none; background: transparent;
+      color: #888; cursor: pointer;
+      border-radius: 6px; font-size: 18px;
+      -webkit-app-region: no-drag;
+    }
+    .new-tab:hover { background: #333; color: white; }
+    .nav-btn {
+      width: 32px; height: 32px;
+      border: none; background: #1a1a2e;
+      color: #a0a0b8; border-radius: 6px;
+      cursor: pointer; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-btn:hover { background: #333; color: white; }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .url-bar {
+      flex: 1; height: 32px;
+      padding: 0 12px; border: none;
+      background: #1a1a2e; color: white;
+      border-radius: 6px; font-size: 14px;
+      outline: none;
+    }
+    .url-bar:focus { outline: 2px solid #6366f1; }
+  </style>
+</head>
+<body>
+  <div class="tab-bar" id="tabBar">
+    <button class="new-tab" id="newTab" title="New Tab">+</button>
+  </div>
+  <div class="toolbar">
+    <button class="nav-btn" id="backBtn" title="Back">←</button>
+    <button class="nav-btn" id="forwardBtn" title="Forward">→</button>
+    <button class="nav-btn" id="reloadBtn" title="Reload">↻</button>
+    <input type="text" class="url-bar" id="urlBar" placeholder="Enter URL or search..." />
+  </div>
+  <script>
+    const { ipcRenderer } = require('electron');
+    
+    // Elements
+    const tabBar = document.getElementById('tabBar');
+    const newTabBtn = document.getElementById('newTab');
+    const backBtn = document.getElementById('backBtn');
+    const forwardBtn = document.getElementById('forwardBtn');
+    const reloadBtn = document.getElementById('reloadBtn');
+    const urlBar = document.getElementById('urlBar');
+    
+    // Tab management
+    let tabs = [];
+    let activeTabId = null;
+    
+    function renderTabs() {
+      // Remove existing tabs (keep new tab button)
+      const existingTabs = tabBar.querySelectorAll('.tab');
+      existingTabs.forEach(t => t.remove());
+      
+      // Add tabs before the + button
+      tabs.forEach(tab => {
+        const tabEl = document.createElement('div');
+        tabEl.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
+        tabEl.innerHTML = \`
+          <span class="tab-title">\${tab.title || 'New Tab'}</span>
+          <button class="tab-close">×</button>
+        \`;
+        tabEl.addEventListener('click', (e) => {
+          if (!e.target.classList.contains('tab-close')) {
+            window.electron.tabs.switch(tab.id);
+          }
+        });
+        tabEl.querySelector('.tab-close').addEventListener('click', () => {
+          window.electron.tabs.close(tab.id);
+        });
+        tabBar.insertBefore(tabEl, newTabBtn);
+      });
+      
+      // Update URL bar
+      const activeTab = tabs.find(t => t.id === activeTabId);
+      if (activeTab) {
+        urlBar.value = activeTab.url;
+        backBtn.disabled = !activeTab.canGoBack;
+        forwardBtn.disabled = !activeTab.canGoForward;
+      }
+    }
+    
+    // Event listeners
+    newTabBtn.addEventListener('click', () => window.electron.tabs.create());
+    backBtn.addEventListener('click', () => window.electron.tabs.back());
+    forwardBtn.addEventListener('click', () => window.electron.tabs.forward());
+    reloadBtn.addEventListener('click', () => window.electron.tabs.reload());
+    
+    urlBar.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && urlBar.value.trim()) {
+        window.electron.tabs.navigate(urlBar.value.trim());
+      }
+    });
+    
+    // Listen for tab updates
+    window.electron.tabs.onUpdate((data) => {
+      tabs = data.tabs;
+      activeTabId = data.activeTabId;
+      renderTabs();
+    });
+    
+    // Initial load
+    window.electron.tabs.getAll().then(data => {
+      if (Array.isArray(data)) {
+        tabs = data;
+        activeTabId = data.find(t => t.isActive)?.id;
+        renderTabs();
+      }
+    });
+  </script>
+</body>
+</html>`;
+  }
+
+  private setupMenu() {
     const template: Electron.MenuItemConstructorOptions[] = [
       {
         label: 'AI Dev Browser',
         submenu: [
           { role: 'about' },
-          { type: 'separator' },
-          {
-            label: 'Preferences',
-            accelerator: 'CmdOrCtrl+,',
-            click: () => this.mainWindow?.webContents.send('open-settings'),
-          },
-          { type: 'separator' },
-          { role: 'services' },
-          { type: 'separator' },
-          { role: 'hide' },
-          { role: 'hideOthers' },
-          { role: 'unhide' },
           { type: 'separator' },
           { role: 'quit' },
         ],
@@ -203,18 +524,14 @@ class AIDevBrowser {
           {
             label: 'New Tab',
             accelerator: 'CmdOrCtrl+T',
-            click: () => this.tabManager.createTab(),
+            click: () => this.createTab(),
           },
-          {
-            label: 'New Window',
-            accelerator: 'CmdOrCtrl+N',
-            click: () => this.createWindow(),
-          },
-          { type: 'separator' },
           {
             label: 'Close Tab',
             accelerator: 'CmdOrCtrl+W',
-            click: () => this.tabManager.closeCurrentTab(),
+            click: () => {
+              if (this.activeTabId) this.closeTab(this.activeTabId);
+            },
           },
         ],
       },
@@ -228,12 +545,6 @@ class AIDevBrowser {
           { role: 'copy' },
           { role: 'paste' },
           { role: 'selectAll' },
-          { type: 'separator' },
-          {
-            label: 'Find',
-            accelerator: 'CmdOrCtrl+F',
-            click: () => this.mainWindow?.webContents.send('open-find'),
-          },
         ],
       },
       {
@@ -251,213 +562,17 @@ class AIDevBrowser {
         ],
       },
       {
-        label: 'Navigate',
-        submenu: [
-          {
-            label: 'Back',
-            accelerator: 'CmdOrCtrl+[',
-            click: () => this.tabManager.goBack(),
-          },
-          {
-            label: 'Forward',
-            accelerator: 'CmdOrCtrl+]',
-            click: () => this.tabManager.goForward(),
-          },
-          {
-            label: 'Reload',
-            accelerator: 'CmdOrCtrl+R',
-            click: () => this.tabManager.reload(),
-          },
-          { type: 'separator' },
-          {
-            label: 'Home',
-            accelerator: 'CmdOrCtrl+Shift+H',
-            click: () => this.tabManager.navigateTo('https://google.com'),
-          },
-        ],
-      },
-      {
-        label: 'Developer',
-        submenu: [
-          {
-            label: 'Connect to Code-Server',
-            click: () => this.mainWindow?.webContents.send('open-code-server-dialog'),
-          },
-          { type: 'separator' },
-          {
-            label: 'API Tester',
-            accelerator: 'CmdOrCtrl+Shift+A',
-            click: () => this.mainWindow?.webContents.send('open-api-tester'),
-          },
-          {
-            label: 'Snippets Manager',
-            accelerator: 'CmdOrCtrl+Shift+S',
-            click: () => this.mainWindow?.webContents.send('open-snippets'),
-          },
-          { type: 'separator' },
-          {
-            label: 'AI Assistant',
-            accelerator: 'CmdOrCtrl+Shift+I',
-            click: () => this.mainWindow?.webContents.send('open-ai-panel'),
-          },
-        ],
-      },
-      {
-        label: 'Bookmarks',
-        submenu: [
-          {
-            label: 'Bookmark This Page',
-            accelerator: 'CmdOrCtrl+D',
-            click: () => this.mainWindow?.webContents.send('add-bookmark'),
-          },
-          {
-            label: 'Show All Bookmarks',
-            accelerator: 'CmdOrCtrl+Shift+B',
-            click: () => this.mainWindow?.webContents.send('show-bookmarks'),
-          },
-        ],
-      },
-      {
         label: 'Window',
         submenu: [
           { role: 'minimize' },
           { role: 'zoom' },
-          { type: 'separator' },
-          { role: 'front' },
-        ],
-      },
-      {
-        label: 'Help',
-        submenu: [
-          {
-            label: 'Documentation',
-            click: () => shell.openExternal('https://docs.flashappai.org'),
-          },
-          {
-            label: 'Report Issue',
-            click: () => shell.openExternal('https://github.com/flashappai/ai-dev-browser/issues'),
-          },
-          { type: 'separator' },
-          {
-            label: 'About AI Dev Browser',
-            click: () => {
-              dialog.showMessageBox({
-                type: 'info',
-                title: 'About AI Dev Browser',
-                message: 'AI Dev Browser',
-                detail: `Version ${app.getVersion()}\n\nAn AI-powered browser for developers working with cloud-based code editors.\n\n© 2025 FlashAppAI Team`,
-              });
-            },
-          },
         ],
       },
     ];
 
-    const menu = Menu.buildFromTemplate(template);
-    Menu.setApplicationMenu(menu);
-  }
-
-  private setupIPC(): void {
-    // Tab management
-    ipcMain.handle('tab:create', (_event, url?: string) => this.tabManager.createTab(url));
-    ipcMain.handle('tab:close', (_event, tabId: string) => this.tabManager.closeTab(tabId));
-    ipcMain.handle('tab:switch', (_event, tabId: string) => this.tabManager.switchToTab(tabId));
-    ipcMain.handle('tab:navigate', (_event, url: string) => this.tabManager.navigateTo(url));
-    ipcMain.handle('tab:back', () => this.tabManager.goBack());
-    ipcMain.handle('tab:forward', () => this.tabManager.goForward());
-    ipcMain.handle('tab:reload', () => this.tabManager.reload());
-    ipcMain.handle('tab:get-all', () => this.tabManager.getAllTabs());
-
-    // Bookmark management
-    ipcMain.handle('bookmark:add', (_event, bookmark) => this.bookmarkManager.add(bookmark));
-    ipcMain.handle('bookmark:remove', (_event, id: string) => this.bookmarkManager.remove(id));
-    ipcMain.handle('bookmark:get-all', () => this.bookmarkManager.getAll());
-    ipcMain.handle('bookmark:search', (_event, query: string) => this.bookmarkManager.search(query));
-
-    // History management
-    ipcMain.handle('history:add', (_event, entry) => this.historyManager.add(entry));
-    ipcMain.handle('history:get-all', () => this.historyManager.getAll());
-    ipcMain.handle('history:search', (_event, query: string) => this.historyManager.search(query));
-    ipcMain.handle('history:clear', () => this.historyManager.clear());
-
-    // Code-Server integration
-    ipcMain.handle('code-server:connect', (_event, url: string) => 
-      this.codeServerIntegration.connect(url)
-    );
-    ipcMain.handle('code-server:disconnect', () => 
-      this.codeServerIntegration.disconnect()
-    );
-    ipcMain.handle('code-server:send-code', (_event, code: string, language?: string) =>
-      this.codeServerIntegration.sendCode(code, language)
-    );
-    ipcMain.handle('code-server:status', () => 
-      this.codeServerIntegration.getStatus()
-    );
-
-    // AI Service
-    ipcMain.handle('ai:explain-code', (_event, code: string, language?: string) =>
-      this.aiService.explainCode(code, language)
-    );
-    ipcMain.handle('ai:summarize-docs', (_event, content: string) =>
-      this.aiService.summarizeDocs(content)
-    );
-    ipcMain.handle('ai:chat', (_event, message: string, context?: string) =>
-      this.aiService.chat(message, context)
-    );
-    ipcMain.handle('ai:configure', (_event, config) =>
-      this.aiService.configure(config)
-    );
-
-    // OAuth
-    ipcMain.handle('oauth:status', () => this.oauthBridge.getStatus());
-    ipcMain.handle('oauth:get-tokens', () => this.oauthBridge.getStoredTokens());
-
-    // App info
-    ipcMain.handle('app:version', () => app.getVersion());
-    ipcMain.handle('app:platform', () => process.platform);
-    ipcMain.handle('app:is-dark-mode', () => nativeTheme.shouldUseDarkColors);
-
-    // Theme changes
-    nativeTheme.on('updated', () => {
-      this.mainWindow?.webContents.send('theme-changed', nativeTheme.shouldUseDarkColors);
-    });
-  }
-
-  private setupOAuthInterception(): void {
-    // Intercept OAuth callbacks
-    session.defaultSession.webRequest.onBeforeRequest(
-      { urls: ['*://localhost/*', '*://127.0.0.1/*'] },
-      (details, callback) => {
-        const url = new URL(details.url);
-        
-        // Check if this is an OAuth callback
-        if (this.oauthBridge.isOAuthCallback(url)) {
-          this.oauthBridge.handleCallback(details.url);
-          // Notify renderer about successful auth
-          this.mainWindow?.webContents.send('oauth-callback-received', {
-            provider: this.oauthBridge.identifyProvider(url),
-            success: true,
-          });
-          callback({ cancel: false });
-        } else {
-          callback({ cancel: false });
-        }
-      }
-    );
-
-    // Handle vscode:// protocol
-    app.on('open-url', (_event, url) => {
-      if (url.startsWith('vscode://')) {
-        this.oauthBridge.handleVSCodeCallback(url);
-        this.mainWindow?.webContents.send('oauth-callback-received', {
-          provider: 'vscode',
-          success: true,
-        });
-      }
-    });
+    Menu.setApplicationMenu(Menu.buildFromTemplate(template));
   }
 }
 
 // Start the browser
-new AIDevBrowser();
-
+new SimpleBrowser();
