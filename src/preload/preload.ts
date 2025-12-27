@@ -34,6 +34,15 @@ export interface CodeServerAPI {
   status: () => Promise<any>;
 }
 
+export interface AIPanelAPI {
+  open: (url?: string) => Promise<any>;
+  close: () => Promise<any>;
+  setUrl: (url: string) => Promise<any>;
+  reload: () => Promise<any>;
+  resize: (width: number) => Promise<any>;
+  status: () => Promise<any>;
+}
+
 export interface AIAPI {
   getProviders: () => Promise<any[]>;
   getConfig: () => Promise<any>;
@@ -85,6 +94,7 @@ export interface ElectronAPI {
   history: HistoryAPI;
   codeServer: CodeServerAPI;
   ai: AIAPI;
+  aiPanel: AIPanelAPI;
   oauth: OAuthAPI;
   app: AppAPI;
   downloads: DownloadAPI;
@@ -133,6 +143,16 @@ contextBridge.exposeInMainWorld('electron', {
     sendCode: (code: string, language?: string) => 
       ipcRenderer.invoke('code-server:send-code', code, language),
     status: () => ipcRenderer.invoke('code-server:status'),
+  },
+
+  // AI Panel
+  aiPanel: {
+    open: (url?: string) => ipcRenderer.invoke('ai-panel:open', url),
+    close: () => ipcRenderer.invoke('ai-panel:close'),
+    setUrl: (url: string) => ipcRenderer.invoke('ai-panel:set-url', url),
+    reload: () => ipcRenderer.invoke('ai-panel:reload'),
+    resize: (width: number) => ipcRenderer.invoke('ai-panel:resize', width),
+    status: () => ipcRenderer.invoke('ai-panel:status'),
   },
 
   // AI Service

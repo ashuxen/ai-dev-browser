@@ -42,6 +42,11 @@ class FlashAppAIBrowser {
   private tabIdCounter = 0;
   private sidebarWidth = 0;
   
+  // AI Panel
+  private aiPanelView: BrowserView | null = null;
+  private aiPanelOpen = false;
+  private aiPanelWidth = 420;
+  
   // Managers
   private bookmarkManager: BookmarkManager;
   private historyManager: HistoryManager;
@@ -232,13 +237,78 @@ class FlashAppAIBrowser {
 
     const bounds = this.mainWindow.getBounds();
     const TOOLBAR_HEIGHT = 88; // Tab bar + address bar
+    const aiWidth = this.aiPanelOpen ? this.aiPanelWidth : 0;
 
     tab.view.setBounds({
       x: this.sidebarWidth,
       y: TOOLBAR_HEIGHT,
-      width: bounds.width - this.sidebarWidth,
+      width: bounds.width - this.sidebarWidth - aiWidth,
       height: bounds.height - TOOLBAR_HEIGHT,
     });
+
+    // Update AI panel bounds if open
+    if (this.aiPanelView && this.aiPanelOpen) {
+      this.aiPanelView.setBounds({
+        x: bounds.width - aiWidth,
+        y: TOOLBAR_HEIGHT,
+        width: aiWidth,
+        height: bounds.height - TOOLBAR_HEIGHT,
+      });
+    }
+  }
+
+  // AI Panel methods
+  private createAIPanel(url: string = 'https://chat.openai.com') {
+    if (!this.mainWindow) return;
+
+    // Remove existing AI panel if any
+    if (this.aiPanelView) {
+      this.mainWindow.removeBrowserView(this.aiPanelView);
+      (this.aiPanelView.webContents as any).destroy?.();
+    }
+
+    this.aiPanelView = new BrowserView({
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+      },
+    });
+
+    this.mainWindow.addBrowserView(this.aiPanelView);
+    this.aiPanelView.webContents.loadURL(url);
+    this.aiPanelOpen = true;
+    this.updateTabBounds();
+
+    console.log('🤖 AI Panel opened:', url);
+  }
+
+  private closeAIPanel() {
+    if (!this.mainWindow || !this.aiPanelView) return;
+
+    this.mainWindow.removeBrowserView(this.aiPanelView);
+    (this.aiPanelView.webContents as any).destroy?.();
+    this.aiPanelView = null;
+    this.aiPanelOpen = false;
+    this.updateTabBounds();
+
+    console.log('🤖 AI Panel closed');
+  }
+
+  private setAIPanelUrl(url: string) {
+    if (this.aiPanelView) {
+      this.aiPanelView.webContents.loadURL(url);
+    }
+  }
+
+  private reloadAIPanel() {
+    if (this.aiPanelView) {
+      this.aiPanelView.webContents.reload();
+    }
+  }
+
+  private resizeAIPanel(width: number) {
+    this.aiPanelWidth = Math.max(320, Math.min(800, width));
+    this.updateTabBounds();
   }
 
   private notifyTabUpdate() {
@@ -358,6 +428,40 @@ class FlashAppAIBrowser {
 
     ipcMain.handle('history:clear', () => {
       this.historyManager.clear();
+    });
+
+    // AI Panel
+    ipcMain.handle('ai-panel:open', (_e, url?: string) => {
+      this.createAIPanel(url || 'https://chat.openai.com');
+      return { success: true };
+    });
+
+    ipcMain.handle('ai-panel:close', () => {
+      this.closeAIPanel();
+      return { success: true };
+    });
+
+    ipcMain.handle('ai-panel:set-url', (_e, url: string) => {
+      this.setAIPanelUrl(url);
+      return { success: true };
+    });
+
+    ipcMain.handle('ai-panel:reload', () => {
+      this.reloadAIPanel();
+      return { success: true };
+    });
+
+    ipcMain.handle('ai-panel:resize', (_e, width: number) => {
+      this.resizeAIPanel(width);
+      return { success: true };
+    });
+
+    ipcMain.handle('ai-panel:status', () => {
+      return { 
+        isOpen: this.aiPanelOpen, 
+        width: this.aiPanelWidth,
+        url: this.aiPanelView?.webContents.getURL() || null
+      };
     });
 
     // Code-server (placeholder)

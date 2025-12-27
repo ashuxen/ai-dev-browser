@@ -516,9 +516,186 @@
       color: var(--text-primary);
     }
 
-    /* AI Panel Styles */
-    .ai-sidebar .sidebar-content {
-      padding: 16px;
+    /* AI Panel Styles - Right Side Panel */
+    .ai-panel {
+      position: fixed;
+      top: 88px;
+      right: 0;
+      width: 420px;
+      height: calc(100vh - 88px);
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border-color);
+      display: none;
+      flex-direction: column;
+      z-index: 100;
+      animation: slideInRight 0.3s ease;
+    }
+
+    .ai-panel.open {
+      display: flex;
+    }
+
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .ai-panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .ai-panel-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .ai-panel-icon {
+      color: var(--accent-teal);
+    }
+
+    .ai-panel-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .ai-panel-btn {
+      width: 28px;
+      height: 28px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+    }
+
+    .ai-panel-btn:hover {
+      background: var(--hover-bg);
+      color: var(--text-primary);
+    }
+
+    .ai-service-selector {
+      display: flex;
+      align-items: center;
+      padding: 10px 12px;
+      gap: 8px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .ai-service-dropdown {
+      flex: 1;
+      padding: 8px 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      outline: none;
+    }
+
+    .ai-service-dropdown:focus {
+      border-color: var(--accent-teal);
+    }
+
+    .ai-reload-btn {
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: var(--transition);
+    }
+
+    .ai-reload-btn:hover {
+      background: var(--hover-bg);
+      color: var(--text-primary);
+    }
+
+    .ai-quick-actions {
+      display: flex;
+      gap: 8px;
+      padding: 10px 12px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .ai-action-btn {
+      flex: 1;
+      padding: 10px 12px;
+      background: linear-gradient(135deg, var(--accent-teal), var(--accent-purple));
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 12px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: var(--transition);
+    }
+
+    .ai-action-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 217, 255, 0.3);
+    }
+
+    .ai-action-btn span {
+      font-size: 14px;
+    }
+
+    .ai-webview-container {
+      flex: 1;
+      position: relative;
+      background: var(--bg-primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ai-webview-info {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .ai-panel-resize {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 4px;
+      height: 100%;
+      cursor: ew-resize;
+      background: transparent;
+    }
+
+    .ai-panel-resize:hover {
+      background: var(--accent-teal);
+    }
+
+    /* Adjust browser view when AI panel is open */
+    .main-content.ai-open .browser-view {
+      margin-right: 420px;
     }
 
     .ai-chat {
@@ -526,60 +703,6 @@
       flex-direction: column;
       height: 100%;
     }
-
-    .ai-provider-badge {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 14px;
-      background: var(--bg-tertiary);
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      margin-bottom: 12px;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .ai-provider-badge:hover {
-      border-color: var(--accent-teal);
-    }
-
-    .ai-provider-info {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .ai-provider-icon {
-      font-size: 20px;
-    }
-
-    .ai-provider-name {
-      font-size: 13px;
-      font-weight: 500;
-    }
-
-    .ai-provider-model {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-
-    .ai-provider-status {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11px;
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
-
-    .status-dot.connected { background: #22c55e; }
-    .status-dot.disconnected { background: #ef4444; }
-    .status-dot.warning { background: #f59e0b; }
 
     .ai-messages {
       flex: 1;
@@ -1206,110 +1329,54 @@
       </div>
     </div>
 
-    <!-- AI Sidebar -->
-    <div class="sidebar ai-sidebar" id="aiSidebar">
-      <div class="sidebar-header">
-        <span class="sidebar-title">
-          <span class="sidebar-title-icon">⚡</span>
+    <!-- AI Panel (Right Side) -->
+    <div class="ai-panel" id="aiPanel">
+      <div class="ai-panel-header">
+        <div class="ai-panel-title">
+          <span class="ai-panel-icon">⚡</span>
           AI Assistant
-        </span>
-        <button class="sidebar-close" id="closeAI">×</button>
-      </div>
-      <div class="sidebar-content">
-        <div class="ai-chat">
-          <!-- Provider Badge -->
-          <div class="ai-provider-badge" id="aiProviderBadge">
-            <div class="ai-provider-info">
-              <span class="ai-provider-icon">🤖</span>
-              <div>
-                <div class="ai-provider-name" id="currentProviderName">Select Provider</div>
-                <div class="ai-provider-model" id="currentModelName">Click to configure</div>
-              </div>
-            </div>
-            <div class="ai-provider-status">
-              <span class="status-dot disconnected" id="providerStatus"></span>
-              <span id="providerStatusText">Not configured</span>
-            </div>
-          </div>
-
-          <div class="ai-features">
-            <button class="ai-feature-btn" id="explainCodeBtn">
-              <span class="ai-feature-icon">📝</span>
-              Explain Code
-            </button>
-            <button class="ai-feature-btn" id="summarizeBtn">
-              <span class="ai-feature-icon">📄</span>
-              Summarize Page
-            </button>
-            <button class="ai-feature-btn" id="suggestBtn">
-              <span class="ai-feature-icon">💡</span>
-              Suggestions
-            </button>
-            <button class="ai-feature-btn" id="debugBtn">
-              <span class="ai-feature-icon">🐛</span>
-              Debug Help
-            </button>
-          </div>
-          
-          <div class="ai-messages" id="aiMessages">
-            <div class="ai-message ai-message-assistant">
-              <p>👋 Hi! I'm your AI assistant. Click the provider badge above to set up your AI. I support <strong>free options</strong> like Groq and Gemini!</p>
-            </div>
-          </div>
-          
-          <div class="ai-input-container">
-            <textarea class="ai-input" id="aiInput" placeholder="Ask me anything..." rows="1"></textarea>
-            <button class="ai-send" id="aiSend">→</button>
-          </div>
+        </div>
+        <div class="ai-panel-actions">
+          <button class="ai-panel-btn" id="aiPanelMinimize" title="Minimize">−</button>
+          <button class="ai-panel-btn" id="aiPanelClose" title="Close">×</button>
         </div>
       </div>
-    </div>
+      
+      <!-- AI Service Selector -->
+      <div class="ai-service-selector">
+        <select id="aiServiceSelect" class="ai-service-dropdown">
+          <option value="https://chat.openai.com">🤖 ChatGPT</option>
+          <option value="https://gemini.google.com">✨ Google Gemini</option>
+          <option value="https://claude.ai">🧠 Claude</option>
+          <option value="https://copilot.microsoft.com">💠 Microsoft Copilot</option>
+          <option value="https://www.perplexity.ai">🔍 Perplexity</option>
+          <option value="https://huggingface.co/chat">🤗 HuggingChat</option>
+          <option value="https://poe.com">💬 Poe</option>
+          <option value="https://www.phind.com">👨‍💻 Phind (Dev)</option>
+        </select>
+        <button class="ai-reload-btn" id="aiReloadBtn" title="Reload">↻</button>
+      </div>
 
-    <!-- AI Settings Modal -->
-    <div class="modal-overlay" id="aiSettingsModal">
-      <div class="modal">
-        <div class="modal-header">
-          <div class="modal-title">
-            <span class="modal-title-icon">⚡</span>
-            AI Settings
-          </div>
-          <button class="modal-close" id="closeSettingsModal">×</button>
-        </div>
-        <div class="modal-body">
-          <div class="modal-section">
-            <div class="modal-section-title">Select AI Provider</div>
-            <div class="provider-list" id="providerList">
-              <!-- Providers will be populated by JS -->
-            </div>
-          </div>
-          
-          <div class="modal-section" id="apiKeySection" style="display: none;">
-            <div class="modal-section-title">API Key</div>
-            <div class="input-group">
-              <label class="input-label" id="apiKeyLabel">API Key</label>
-              <input type="password" class="input-field" id="apiKeyInput" placeholder="Enter your API key..." />
-              <div class="input-hint" id="apiKeyHint">
-                Get your free API key from the provider's website.
-              </div>
-            </div>
-            <div class="test-connection">
-              <button class="test-btn" id="testConnectionBtn">Test Connection</button>
-              <span class="test-status" id="testStatus"></span>
-            </div>
-          </div>
+      <!-- Quick Actions -->
+      <div class="ai-quick-actions">
+        <button class="ai-action-btn" id="aiSummarize" title="Summarize current page">
+          <span>📄</span> Summarize Page
+        </button>
+        <button class="ai-action-btn" id="aiExplainCode" title="Explain selected code">
+          <span>📝</span> Explain Code
+        </button>
+      </div>
 
-          <div class="modal-section" id="modelSection" style="display: none;">
-            <div class="modal-section-title">Select Model</div>
-            <select class="model-select" id="modelSelect">
-              <!-- Models will be populated by JS -->
-            </select>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" id="cancelSettingsBtn">Cancel</button>
-          <button class="btn btn-primary" id="saveSettingsBtn">Save Settings</button>
+      <!-- AI BrowserView Container (content managed by main process) -->
+      <div class="ai-webview-container" id="aiWebviewContainer">
+        <div class="ai-webview-info">
+          <p style="font-size: 13px; color: var(--text-secondary);">AI Assistant loads here</p>
+          <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Select a service above to start</p>
         </div>
       </div>
+
+      <!-- Resize Handle -->
+      <div class="ai-panel-resize" id="aiPanelResize"></div>
     </div>
 
     <!-- Browser View Placeholder -->
@@ -1335,7 +1402,6 @@
     // Sidebars
     const bookmarksSidebar = document.getElementById('bookmarksSidebar');
     const historySidebar = document.getElementById('historySidebar');
-    const aiSidebar = document.getElementById('aiSidebar');
 
     // State
     let tabs = [];
@@ -1523,246 +1589,148 @@
       renderHistory(document.getElementById('historySearch').value);
     }
 
-    // ===== AI SETTINGS =====
-    let aiProviders = [];
-    let aiConfig = { selectedProvider: '', selectedModel: '', apiKeys: {} };
-    let selectedProvider = null;
+    // ===== AI PANEL =====
+    const aiPanel = document.getElementById('aiPanel');
+    const aiServiceSelect = document.getElementById('aiServiceSelect');
+    const mainContent = document.querySelector('.main-content');
+    let aiPanelWidth = 420;
+    let aiPanelIsOpen = false;
 
-    const providerIcons = {
-      gemini: '✨',
-      groq: '⚡',
-      openrouter: '🌐',
-      openai: '🤖',
-      anthropic: '🧠',
-      ollama: '💻'
-    };
-
-    const apiKeyHints = {
-      gemini: 'Get FREE API key at <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com</a>',
-      groq: 'Get FREE API key at <a href="https://console.groq.com/keys" target="_blank">console.groq.com</a>',
-      openrouter: 'Get API key at <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai</a> (some free models)',
-      openai: 'Get API key at <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a> (paid)',
-      anthropic: 'Get API key at <a href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> (paid)',
-      ollama: 'No API key needed. Install Ollama from <a href="https://ollama.ai" target="_blank">ollama.ai</a>'
-    };
-
-    async function loadAIConfig() {
-      if (!window.electron) return;
-      
-      try {
-        aiProviders = await window.electron.ai.getProviders();
-        aiConfig = await window.electron.ai.getConfig();
-        updateProviderBadge();
-      } catch (e) {
-        console.error('Failed to load AI config:', e);
-      }
-    }
-
-    function updateProviderBadge() {
-      const provider = aiProviders.find(p => p.id === aiConfig.selectedProvider);
-      const model = provider?.models.find(m => m.id === aiConfig.selectedModel);
-      const hasApiKey = !provider?.requiresApiKey || aiConfig.apiKeys[aiConfig.selectedProvider];
-
-      document.getElementById('currentProviderName').textContent = provider?.name || 'Select Provider';
-      document.getElementById('currentModelName').textContent = model?.name || 'Click to configure';
-      
-      const statusDot = document.getElementById('providerStatus');
-      const statusText = document.getElementById('providerStatusText');
-      
-      if (provider && hasApiKey) {
-        statusDot.className = 'status-dot connected';
-        statusText.textContent = 'Ready';
-      } else if (provider) {
-        statusDot.className = 'status-dot warning';
-        statusText.textContent = 'Needs API key';
+    async function toggleAIPanel() {
+      if (aiPanelIsOpen) {
+        await closeAIPanel();
       } else {
-        statusDot.className = 'status-dot disconnected';
-        statusText.textContent = 'Not configured';
+        await openAIPanel();
       }
     }
 
-    function openSettingsModal() {
-      const modal = document.getElementById('aiSettingsModal');
-      const providerList = document.getElementById('providerList');
+    async function openAIPanel() {
+      const selectedUrl = aiServiceSelect.value;
       
-      // Render provider list
-      providerList.innerHTML = aiProviders.map(p => `
-        <div class="provider-card ${aiConfig.selectedProvider === p.id ? 'selected' : ''}" data-id="${p.id}">
-          <div class="provider-card-icon">${providerIcons[p.id] || '🤖'}</div>
-          <div class="provider-card-content">
-            <div class="provider-card-name">${p.name}</div>
-            <div class="provider-card-desc">${p.description}</div>
-          </div>
-          ${p.isFree ? '<span class="provider-card-badge">Free</span>' : ''}
-        </div>
-      `).join('');
-
-      // Add click handlers
-      providerList.querySelectorAll('.provider-card').forEach(card => {
-        card.addEventListener('click', () => selectProvider(card.dataset.id));
-      });
-
-      // Show current provider settings
-      if (aiConfig.selectedProvider) {
-        selectProvider(aiConfig.selectedProvider, false);
-      }
-
-      modal.classList.add('open');
+      // Open AI panel via main process
+      await window.electron.aiPanel.open(selectedUrl);
+      
+      aiPanel.classList.add('open');
+      mainContent.classList.add('ai-open');
+      aiBtn.classList.add('active');
+      aiPanelIsOpen = true;
+      
+      // Close other sidebars
+      bookmarksSidebar.classList.remove('open');
+      historySidebar.classList.remove('open');
+      bookmarkBtn.classList.remove('active');
+      historyBtn.classList.remove('active');
     }
 
-    function selectProvider(providerId, updateUI = true) {
-      selectedProvider = aiProviders.find(p => p.id === providerId);
-      if (!selectedProvider) return;
-
-      // Update UI
-      document.querySelectorAll('.provider-card').forEach(card => {
-        card.classList.toggle('selected', card.dataset.id === providerId);
-      });
-
-      // Show API key section
-      const apiKeySection = document.getElementById('apiKeySection');
-      const modelSection = document.getElementById('modelSection');
+    async function closeAIPanel() {
+      await window.electron.aiPanel.close();
       
-      if (selectedProvider.requiresApiKey) {
-        apiKeySection.style.display = 'block';
-        document.getElementById('apiKeyLabel').textContent = `${selectedProvider.name} API Key`;
-        document.getElementById('apiKeyHint').innerHTML = apiKeyHints[providerId] || '';
-        document.getElementById('apiKeyInput').value = aiConfig.apiKeys[providerId] || '';
-      } else {
-        apiKeySection.style.display = 'none';
-      }
-
-      // Show model selection
-      modelSection.style.display = 'block';
-      const modelSelect = document.getElementById('modelSelect');
-      modelSelect.innerHTML = selectedProvider.models.map(m => `
-        <option value="${m.id}" ${aiConfig.selectedModel === m.id ? 'selected' : ''}>${m.name} - ${m.description}</option>
-      `).join('');
+      aiPanel.classList.remove('open');
+      mainContent.classList.remove('ai-open');
+      aiBtn.classList.remove('active');
+      aiPanelIsOpen = false;
     }
 
-    async function saveSettings() {
-      if (!selectedProvider) return;
-
-      const apiKey = document.getElementById('apiKeyInput').value.trim();
-      const modelId = document.getElementById('modelSelect').value;
-
-      // Save API key if provided
-      if (selectedProvider.requiresApiKey && apiKey) {
-        await window.electron.ai.setApiKey(selectedProvider.id, apiKey);
-      }
-
-      // Save config
-      await window.electron.ai.setConfig({
-        selectedProvider: selectedProvider.id,
-        selectedModel: modelId
-      });
-
-      // Reload config
-      await loadAIConfig();
-      closeSettingsModal();
-      
-      addAIMessage(`✅ Now using <strong>${selectedProvider.name}</strong> with model <strong>${selectedProvider.models.find(m => m.id === modelId)?.name}</strong>. Ask me anything!`);
-    }
-
-    async function testConnection() {
-      const testBtn = document.getElementById('testConnectionBtn');
-      const testStatus = document.getElementById('testStatus');
-      
-      testBtn.disabled = true;
-      testBtn.textContent = 'Testing...';
-      testStatus.textContent = '';
-      testStatus.className = 'test-status';
-
-      try {
-        const apiKey = document.getElementById('apiKeyInput').value.trim();
-        if (selectedProvider?.requiresApiKey && !apiKey) {
-          testStatus.textContent = 'Please enter API key';
-          testStatus.className = 'test-status error';
-          return;
+    function setupAIPanel() {
+      // Service selector - change AI service
+      aiServiceSelect.addEventListener('change', async (e) => {
+        if (aiPanelIsOpen) {
+          await window.electron.aiPanel.setUrl(e.target.value);
         }
+      });
 
-        // Temporarily save to test
-        if (apiKey) {
-          await window.electron.ai.setApiKey(selectedProvider.id, apiKey);
-        }
-        await window.electron.ai.setConfig({
-          selectedProvider: selectedProvider.id,
-          selectedModel: document.getElementById('modelSelect').value
+      // Reload button
+      document.getElementById('aiReloadBtn').addEventListener('click', async () => {
+        await window.electron.aiPanel.reload();
+        showToast('🔄 Reloading AI service...');
+      });
+
+      // Close/Minimize buttons
+      document.getElementById('aiPanelClose').addEventListener('click', closeAIPanel);
+      document.getElementById('aiPanelMinimize').addEventListener('click', closeAIPanel);
+
+      // Quick actions - copy prompts for AI
+      document.getElementById('aiSummarize').addEventListener('click', () => {
+        const url = urlBar.value;
+        const prompt = `Please summarize this webpage: ${url}`;
+        navigator.clipboard.writeText(prompt).then(() => {
+          showToast('📋 Copied! Paste into the AI chat.');
         });
+      });
 
-        const response = await window.electron.ai.chat('Hello! Please respond with just "Connected successfully!"');
+      document.getElementById('aiExplainCode').addEventListener('click', () => {
+        const prompt = 'Please explain this code:\n\n[Paste your code here]';
+        navigator.clipboard.writeText(prompt).then(() => {
+          showToast('📋 Select code → Copy → Paste into AI');
+        });
+      });
+
+      // Resize functionality
+      const resizeHandle = document.getElementById('aiPanelResize');
+      let isResizing = false;
+
+      resizeHandle.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        document.body.style.cursor = 'ew-resize';
+        document.body.style.userSelect = 'none';
         
-        if (response.success) {
-          testStatus.textContent = '✓ Connection successful!';
-          testStatus.className = 'test-status success';
-        } else {
-          testStatus.textContent = response.error?.split('\n')[0] || 'Connection failed';
-          testStatus.className = 'test-status error';
-        }
-      } catch (e) {
-        testStatus.textContent = 'Connection failed';
-        testStatus.className = 'test-status error';
-      } finally {
-        testBtn.disabled = false;
-        testBtn.textContent = 'Test Connection';
-      }
-    }
-
-    function closeSettingsModal() {
-      document.getElementById('aiSettingsModal').classList.remove('open');
-    }
-
-    // ===== AI CHAT =====
-    const aiMessages = document.getElementById('aiMessages');
-    const aiInput = document.getElementById('aiInput');
-
-    function addAIMessage(content, isUser = false) {
-      const msg = document.createElement('div');
-      msg.className = `ai-message ${isUser ? 'ai-message-user' : 'ai-message-assistant'}`;
-      msg.innerHTML = `<p>${content}</p>`;
-      aiMessages.appendChild(msg);
-      aiMessages.scrollTop = aiMessages.scrollHeight;
-    }
-
-    async function sendAIMessage() {
-      const message = aiInput.value.trim();
-      if (!message) return;
-
-      addAIMessage(message, true);
-      aiInput.value = '';
-
-      // Show typing indicator
-      const typingId = 'typing-' + Date.now();
-      const typingMsg = document.createElement('div');
-      typingMsg.id = typingId;
-      typingMsg.className = 'ai-message ai-message-assistant';
-      typingMsg.innerHTML = '<p><span class="loading"></span> Thinking...</p>';
-      aiMessages.appendChild(typingMsg);
-      aiMessages.scrollTop = aiMessages.scrollHeight;
-
-      try {
-        const response = await window.electron.ai.chat(message, currentUrl);
-        document.getElementById(typingId)?.remove();
+        const handleMouseMove = async (e) => {
+          if (!isResizing) return;
+          const newWidth = window.innerWidth - e.clientX;
+          if (newWidth >= 320 && newWidth <= 800) {
+            aiPanelWidth = newWidth;
+            aiPanel.style.width = newWidth + 'px';
+            await window.electron.aiPanel.resize(newWidth);
+          }
+        };
         
-        if (response.success) {
-          addAIMessage(response.content);
-        } else {
-          addAIMessage('⚠️ ' + (response.error || 'Unable to get response. Please configure your AI API key in settings.').replace(/\n/g, '<br>'));
-        }
-      } catch (err) {
-        document.getElementById(typingId)?.remove();
-        addAIMessage('⚠️ An error occurred. Please try again.');
+        const handleMouseUp = () => {
+          isResizing = false;
+          document.body.style.cursor = '';
+          document.body.style.userSelect = '';
+          document.removeEventListener('mousemove', handleMouseMove);
+          document.removeEventListener('mouseup', handleMouseUp);
+        };
+        
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+      });
+    }
+
+    // Toast notification
+    function showToast(message) {
+      let toast = document.getElementById('toast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        toast.style.cssText = `
+          position: fixed;
+          bottom: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: var(--bg-elevated);
+          color: var(--text-primary);
+          padding: 12px 24px;
+          border-radius: 10px;
+          font-size: 13px;
+          z-index: 9999;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+          border: 1px solid var(--border-color);
+          animation: fadeIn 0.3s ease;
+        `;
+        document.body.appendChild(toast);
       }
+      toast.textContent = message;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
     }
 
     // ===== SIDEBAR MANAGEMENT =====
     function closeSidebars() {
       bookmarksSidebar.classList.remove('open');
       historySidebar.classList.remove('open');
-      aiSidebar.classList.remove('open');
       bookmarkBtn.classList.remove('active');
       historyBtn.classList.remove('active');
-      aiBtn.classList.remove('active');
       updateBrowserViewWidth();
     }
 
@@ -1777,12 +1745,14 @@
     }
 
     function updateBrowserViewWidth() {
-      // Notify main process about sidebar state
+      // Notify main process about sidebar state (bookmarks/history sidebars)
       const isOpen = bookmarksSidebar.classList.contains('open') || 
-                     historySidebar.classList.contains('open') || 
-                     aiSidebar.classList.contains('open');
+                     historySidebar.classList.contains('open');
       if (window.electron) {
-        window.electron.tabs.navigate('__sidebar:' + (isOpen ? '320' : '0'));
+        // Don't update if AI panel is handling the width
+        if (!aiPanel.classList.contains('open')) {
+          window.electron.tabs.navigate('__sidebar:' + (isOpen ? '320' : '0'));
+        }
       }
     }
 
@@ -1820,13 +1790,12 @@
       });
 
       aiBtn.addEventListener('click', () => {
-        toggleSidebar(aiSidebar, aiBtn);
+        toggleAIPanel();
       });
 
       // Sidebar close buttons
       document.getElementById('closeBookmarks').addEventListener('click', closeSidebars);
       document.getElementById('closeHistory').addEventListener('click', closeSidebars);
-      document.getElementById('closeAI').addEventListener('click', closeSidebars);
 
       // Bookmark actions
       document.getElementById('addBookmarkBtn').addEventListener('click', async () => {
@@ -1853,49 +1822,8 @@
         renderHistory(e.target.value);
       });
 
-      // AI actions
-      document.getElementById('aiSend').addEventListener('click', sendAIMessage);
-      aiInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          sendAIMessage();
-        }
-      });
-
-      document.getElementById('explainCodeBtn').addEventListener('click', () => {
-        aiInput.value = 'Explain the code on this page';
-        sendAIMessage();
-      });
-
-      document.getElementById('summarizeBtn').addEventListener('click', () => {
-        aiInput.value = 'Summarize the content of this page';
-        sendAIMessage();
-      });
-
-      document.getElementById('suggestBtn').addEventListener('click', () => {
-        aiInput.value = 'Suggest improvements for this code';
-        sendAIMessage();
-      });
-
-      document.getElementById('debugBtn').addEventListener('click', () => {
-        aiInput.value = 'Help me debug issues with this code';
-        sendAIMessage();
-      });
-
-      // AI Settings Modal
-      document.getElementById('aiProviderBadge').addEventListener('click', openSettingsModal);
-      document.getElementById('closeSettingsModal').addEventListener('click', closeSettingsModal);
-      document.getElementById('cancelSettingsBtn').addEventListener('click', closeSettingsModal);
-      document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
-      document.getElementById('testConnectionBtn').addEventListener('click', testConnection);
-      
-      // Close modal on overlay click
-      document.getElementById('aiSettingsModal').addEventListener('click', (e) => {
-        if (e.target.id === 'aiSettingsModal') closeSettingsModal();
-      });
-
-      // Load AI config
-      loadAIConfig();
+      // AI Panel Setup
+      setupAIPanel();
 
       // Listen for tab updates
       window.electron.tabs.onUpdate((data) => {
