@@ -35,9 +35,16 @@ export interface CodeServerAPI {
 }
 
 export interface AIAPI {
-  explainCode: (code: string, language?: string) => Promise<any>;
-  summarizeDocs: (content: string) => Promise<any>;
+  getProviders: () => Promise<any[]>;
+  getConfig: () => Promise<any>;
+  setConfig: (config: any) => Promise<void>;
+  setApiKey: (providerId: string, apiKey: string) => Promise<void>;
   chat: (message: string, context?: string) => Promise<any>;
+  explainCode: (code: string, language?: string) => Promise<any>;
+  summarizeDocs: (content: string, url?: string) => Promise<any>;
+  suggest: (code: string, language?: string) => Promise<any>;
+  debug: (code: string, error?: string, language?: string) => Promise<any>;
+  clearHistory: () => Promise<void>;
   configure: (config: any) => Promise<void>;
 }
 
@@ -130,12 +137,22 @@ contextBridge.exposeInMainWorld('electron', {
 
   // AI Service
   ai: {
-    explainCode: (code: string, language?: string) =>
-      ipcRenderer.invoke('ai:explain-code', code, language),
-    summarizeDocs: (content: string) =>
-      ipcRenderer.invoke('ai:summarize-docs', content),
+    getProviders: () => ipcRenderer.invoke('ai:get-providers'),
+    getConfig: () => ipcRenderer.invoke('ai:get-config'),
+    setConfig: (config: any) => ipcRenderer.invoke('ai:set-config', config),
+    setApiKey: (providerId: string, apiKey: string) => 
+      ipcRenderer.invoke('ai:set-api-key', providerId, apiKey),
     chat: (message: string, context?: string) =>
       ipcRenderer.invoke('ai:chat', message, context),
+    explainCode: (code: string, language?: string) =>
+      ipcRenderer.invoke('ai:explain-code', code, language),
+    summarizeDocs: (content: string, url?: string) =>
+      ipcRenderer.invoke('ai:summarize-docs', content, url),
+    suggest: (code: string, language?: string) =>
+      ipcRenderer.invoke('ai:suggest', code, language),
+    debug: (code: string, error?: string, language?: string) =>
+      ipcRenderer.invoke('ai:debug', code, error, language),
+    clearHistory: () => ipcRenderer.invoke('ai:clear-history'),
     configure: (config: any) => ipcRenderer.invoke('ai:configure', config),
   },
 

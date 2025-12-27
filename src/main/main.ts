@@ -9,6 +9,7 @@ import {
 import path from 'path';
 import { BookmarkManager } from './bookmark-manager';
 import { HistoryManager } from './history-manager';
+import { AIService } from './ai-service';
 
 console.log('🚀 FlashAppAI Browser starting...');
 
@@ -44,10 +45,12 @@ class FlashAppAIBrowser {
   // Managers
   private bookmarkManager: BookmarkManager;
   private historyManager: HistoryManager;
+  private aiService: AIService;
 
   constructor() {
     this.bookmarkManager = new BookmarkManager();
     this.historyManager = new HistoryManager();
+    this.aiService = new AIService();
     this.init();
   }
 
@@ -363,39 +366,50 @@ class FlashAppAIBrowser {
     ipcMain.handle('code-server:send-code', () => false);
     ipcMain.handle('code-server:status', () => ({ connected: false, url: null }));
 
-    // AI (placeholder - responds with helpful message)
-    ipcMain.handle('ai:explain-code', () => ({
-      success: false,
-      error: 'AI not configured. Add your OpenAI or Anthropic API key in settings.'
-    }));
-
-    ipcMain.handle('ai:summarize-docs', () => ({
-      success: false,
-      error: 'AI not configured. Add your OpenAI or Anthropic API key in settings.'
-    }));
-
-    ipcMain.handle('ai:chat', (_e, message: string) => {
-      // Simple responses for demo
-      const responses: { [key: string]: string } = {
-        'hello': 'Hello! How can I help you with your development today?',
-        'hi': 'Hi there! I\'m ready to assist with code, documentation, or any development questions.',
-      };
-
-      const lowerMsg = message.toLowerCase();
-      
-      for (const [key, response] of Object.entries(responses)) {
-        if (lowerMsg.includes(key)) {
-          return { success: true, content: response };
-        }
-      }
-
-      return {
-        success: false,
-        error: 'To enable AI features, configure your API key:\n\n1. Get an API key from OpenAI or Anthropic\n2. Go to Settings > AI Configuration\n3. Enter your API key\n\nOnce configured, I can help you:\n• Explain code snippets\n• Summarize documentation\n• Debug issues\n• Suggest improvements'
-      };
+    // AI Service
+    ipcMain.handle('ai:get-providers', () => {
+      return this.aiService.getProviders();
     });
 
-    ipcMain.handle('ai:configure', () => {});
+    ipcMain.handle('ai:get-config', () => {
+      return this.aiService.getConfig();
+    });
+
+    ipcMain.handle('ai:set-config', (_e, config: any) => {
+      this.aiService.setConfig(config);
+    });
+
+    ipcMain.handle('ai:set-api-key', (_e, providerId: string, apiKey: string) => {
+      this.aiService.setApiKey(providerId, apiKey);
+    });
+
+    ipcMain.handle('ai:chat', async (_e, message: string, context?: string) => {
+      return await this.aiService.chat(message, context);
+    });
+
+    ipcMain.handle('ai:explain-code', async (_e, code: string, language?: string) => {
+      return await this.aiService.explainCode(code, language);
+    });
+
+    ipcMain.handle('ai:summarize-docs', async (_e, content: string, url?: string) => {
+      return await this.aiService.summarizePage(content, url || '');
+    });
+
+    ipcMain.handle('ai:suggest', async (_e, code: string, language?: string) => {
+      return await this.aiService.suggestImprovements(code, language);
+    });
+
+    ipcMain.handle('ai:debug', async (_e, code: string, error?: string, language?: string) => {
+      return await this.aiService.debugHelp(code, error, language);
+    });
+
+    ipcMain.handle('ai:clear-history', () => {
+      this.aiService.clearHistory();
+    });
+
+    ipcMain.handle('ai:configure', (_e, config: any) => {
+      this.aiService.setConfig(config);
+    });
 
     // OAuth (placeholder)
     ipcMain.handle('oauth:status', () => ({}));
