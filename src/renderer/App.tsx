@@ -50,24 +50,41 @@ const App: React.FC = () => {
   // Initialize app
   useEffect(() => {
     const init = async () => {
-      // Check dark mode
-      const isDarkMode = await window.electron.app.isDarkMode();
-      setState(prev => ({ ...prev, isDarkMode }));
-
-      // Get initial tabs
-      const tabs = await window.electron.tabs.getAll();
-      if (tabs.length > 0) {
-        const activeTab = tabs.find((t: Tab) => t.isActive);
-        setState(prev => ({
-          ...prev,
-          tabs,
-          activeTabId: activeTab?.id || tabs[0].id,
-        }));
+      console.log('🔧 Initializing App...');
+      
+      // Check if electron API is available
+      if (!window.electron) {
+        console.error('❌ window.electron is not available!');
+        return;
       }
+      
+      try {
+        // Check dark mode
+        const isDarkMode = await window.electron.app.isDarkMode();
+        console.log('🌙 Dark mode:', isDarkMode);
+        setState(prev => ({ ...prev, isDarkMode }));
 
-      // Get code-server status
-      const codeServerStatus = await window.electron.codeServer.status();
-      setState(prev => ({ ...prev, codeServerStatus }));
+        // Get initial tabs
+        const tabs = await window.electron.tabs.getAll();
+        console.log('📑 Initial tabs:', tabs);
+        if (tabs && tabs.length > 0) {
+          const activeTab = tabs.find((t: Tab) => t.isActive);
+          setState(prev => ({
+            ...prev,
+            tabs,
+            activeTabId: activeTab?.id || tabs[0].id,
+          }));
+        }
+
+        // Get code-server status
+        const codeServerStatus = await window.electron.codeServer.status();
+        console.log('🔌 Code-server status:', codeServerStatus);
+        setState(prev => ({ ...prev, codeServerStatus }));
+        
+        console.log('✅ App initialized successfully');
+      } catch (error) {
+        console.error('❌ Error initializing app:', error);
+      }
     };
 
     init();

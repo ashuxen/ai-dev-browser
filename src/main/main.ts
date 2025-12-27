@@ -10,6 +10,10 @@ import {
   protocol,
 } from 'electron';
 import path from 'path';
+
+console.log('🚀 Main process starting...');
+console.log('📍 __dirname:', __dirname);
+console.log('🖥️ Platform:', process.platform);
 import { OAuthBridge } from './oauth-bridge';
 import { CodeServerIntegration } from './code-server-integration';
 import { TabManager } from './tab-manager';
@@ -20,8 +24,15 @@ import { AIService } from '../services/ai-service';
 import { setupAutoUpdater } from './auto-updater';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (require('electron-squirrel-startup')) {
-  app.quit();
+// Only run this check on Windows
+if (process.platform === 'win32') {
+  try {
+    if (require('electron-squirrel-startup')) {
+      app.quit();
+    }
+  } catch (e) {
+    // Ignore if module not found
+  }
 }
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
@@ -152,10 +163,8 @@ class AIDevBrowser {
       );
     }
 
-    // Open DevTools in development
-    if (process.env.NODE_ENV === 'development') {
-      this.mainWindow.webContents.openDevTools({ mode: 'detach' });
-    }
+    // Open DevTools (always for now to debug)
+    this.mainWindow.webContents.openDevTools({ mode: 'right' });
 
     this.mainWindow.on('closed', () => {
       this.mainWindow = null;
