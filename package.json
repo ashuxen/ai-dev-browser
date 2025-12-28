@@ -1,7 +1,7 @@
 {
   "name": "ai-dev-browser",
   "productName": "AI Dev Browser",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "AI-powered browser for developers working with cloud-based code editors",
   "main": ".vite/build/main.js",
   "author": {
@@ -26,7 +26,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
     "electron-squirrel-startup": "^1.0.1",
-    "electron-store": "^8.1.0",
+    "electron-store": "^7.0.3",
     "electron-updater": "^6.1.7",
     "openai": "^4.20.0",
     "uuid": "^9.0.0",

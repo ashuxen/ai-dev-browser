@@ -8,8 +8,14 @@ const config: ForgeConfig = {
   packagerConfig: {
     name: 'AI Dev Browser',
     executableName: 'ai-dev-browser',
-    asar: true,
+    asar: {
+      unpack: '**/{*.node,node_modules/electron-store/**/*,node_modules/conf/**/*,node_modules/atomically/**/*}'
+    },
     icon: './assets/icons/icon',
+    extraResource: [
+      './src/renderer/browser-ui.html',
+      './src/renderer/phantom-mode.html',
+    ],
     appBundleId: 'com.flashappai.aidevbrowser',
     appCategoryType: 'public.app-category.developer-tools',
     osxSign: {

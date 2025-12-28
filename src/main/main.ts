@@ -107,10 +107,22 @@ class FlashAppAIBrowser {
       },
     });
 
-    // Load the browser UI HTML file directly from src
-    const uiPath = path.join(app.getAppPath(), 'src/renderer/browser-ui.html');
-    console.log('📦 Loading UI from:', uiPath);
-    await this.mainWindow.loadFile(uiPath);
+    // Load the browser UI HTML file
+    const isDev = !app.isPackaged;
+    const uiPath = isDev
+      ? path.join(app.getAppPath(), 'src/renderer/browser-ui.html')
+      : path.join(process.resourcesPath, 'browser-ui.html');
+    console.log('📦 Loading UI from:', uiPath, '(isDev:', isDev, ')');
+    
+    try {
+      await this.mainWindow.loadFile(uiPath);
+    } catch (err) {
+      console.error('❌ Failed to load UI:', err);
+      // Fallback: try loading from app path
+      const fallbackPath = path.join(app.getAppPath(), 'src/renderer/browser-ui.html');
+      console.log('📦 Trying fallback:', fallbackPath);
+      await this.mainWindow.loadFile(fallbackPath);
+    }
 
     // Create initial tab after UI loads
     setTimeout(() => {
@@ -368,7 +380,10 @@ class FlashAppAIBrowser {
     });
 
     // Load phantom mode UI
-    const phantomUIPath = path.join(app.getAppPath(), 'src/renderer/phantom-mode.html');
+    const phantomIsDev = !app.isPackaged;
+    const phantomUIPath = phantomIsDev
+      ? path.join(app.getAppPath(), 'src/renderer/phantom-mode.html')
+      : path.join(process.resourcesPath, 'phantom-mode.html');
     phantomWindow.loadFile(phantomUIPath).catch(() => {
       // Fallback if phantom-mode.html doesn't exist yet
       phantomWindow.loadURL('https://duckduckgo.com');

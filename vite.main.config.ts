@@ -18,7 +18,12 @@ export default defineConfig({
       fileName: () => 'main.js',
     },
     rollupOptions: {
-      external: ['electron', 'electron-store', 'ws', 'electron-updater'],
+      // Only externalize electron itself - bundle everything else
+      external: ['electron'],
+    },
+    commonjsOptions: {
+      // Handle CommonJS modules properly
+      ignoreDynamicRequires: true,
     },
     minify: process.env.NODE_ENV === 'production',
     sourcemap: true,
