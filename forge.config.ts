@@ -1,8 +1,5 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
-import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
-import { MakerDeb } from '@electron-forge/maker-deb';
-import { MakerRpm } from '@electron-forge/maker-rpm';
 import { MakerDMG } from '@electron-forge/maker-dmg';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
@@ -34,45 +31,13 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [
-    // Windows - Simple ZIP (no signing required)
-    new MakerZIP({}, ['win32']),
-    // Windows Squirrel installer
-    new MakerSquirrel({
-      name: 'FlashAppAI-Browser',
-      authors: 'FlashAppAI Team',
-      description: 'AI-powered browser for developers',
-    }),
-    // macOS ZIP
-    new MakerZIP({}, ['darwin']),
+    // ZIP for all platforms (simple, always works)
+    new MakerZIP({}),
     // macOS DMG
     new MakerDMG({
       name: 'FlashAppAI-Browser',
       format: 'ULFO',
     }, ['darwin']),
-    // Linux ZIP (universal)
-    new MakerZIP({}, ['linux']),
-    // Linux DEB
-    new MakerDeb({
-      options: {
-        name: 'flashappai-browser',
-        productName: 'FlashAppAI Browser',
-        genericName: 'Web Browser',
-        description: 'AI-powered browser for developers',
-        categories: ['Development', 'Network', 'WebBrowser'],
-        maintainer: 'FlashAppAI Team',
-        homepage: 'https://flashappai.org',
-      },
-    }),
-    // Linux RPM
-    new MakerRpm({
-      options: {
-        name: 'flashappai-browser',
-        productName: 'FlashAppAI Browser',
-        description: 'AI-powered browser for developers',
-        categories: ['Development', 'Network', 'WebBrowser'],
-        homepage: 'https://flashappai.org',
-      },
-    }),
   ],
   plugins: [
     new AutoUnpackNativesPlugin({}),

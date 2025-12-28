@@ -27,8 +27,6 @@ jobs:
 
       - name: Build for macOS ${{ matrix.arch }}
         run: npm run make -- --arch=${{ matrix.arch }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
@@ -53,21 +51,18 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build for Windows
-        run: npm run make
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Package for Windows
+        run: npm run package
 
-      - name: List output files
-        run: Get-ChildItem -Recurse out/make
+      - name: Create ZIP
+        run: Compress-Archive -Path "out/AI Dev Browser-win32-x64" -DestinationPath "out/FlashAppAI-Browser-win32-x64.zip"
         shell: pwsh
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-x64
-          path: out/make/
-          if-no-files-found: warn
+          path: out/*.zip
 
   build-linux:
     runs-on: ubuntu-latest
@@ -81,28 +76,22 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install Linux dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y rpm dpkg fakeroot
-
       - name: Install dependencies
         run: npm install
 
-      - name: Build for Linux
-        run: npm run make
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Package for Linux
+        run: npm run package
 
-      - name: List output files
-        run: find out/make -type f
+      - name: Create ZIP
+        run: |
+          cd out
+          zip -r FlashAppAI-Browser-linux-x64.zip "AI Dev Browser-linux-x64"
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-x64
-          path: out/make/
-          if-no-files-found: warn
+          path: out/*.zip
 
   release:
     needs: [build-macos, build-windows, build-linux]
@@ -116,7 +105,7 @@ jobs:
           path: artifacts
 
       - name: Display downloaded files
-        run: find artifacts -type f -name "*"
+        run: find artifacts -type f
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -124,9 +113,6 @@ jobs:
           files: |
             artifacts/**/*.dmg
             artifacts/**/*.zip
-            artifacts/**/*.exe
-            artifacts/**/*.deb
-            artifacts/**/*.rpm
           draft: true
           generate_release_notes: true
         env:
