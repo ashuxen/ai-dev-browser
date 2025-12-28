@@ -34,15 +34,13 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [
-    // Windows
+    // Windows - Simple ZIP (no signing required)
+    new MakerZIP({}, ['win32']),
+    // Windows Squirrel installer
     new MakerSquirrel({
-      name: 'AIDevBrowser',
+      name: 'FlashAppAI-Browser',
       authors: 'FlashAppAI Team',
       description: 'AI-powered browser for developers',
-      iconUrl: 'https://raw.githubusercontent.com/flashappai/ai-dev-browser/main/assets/icons/icon.ico',
-      setupIcon: './assets/icons/icon.ico',
-      certificateFile: process.env.WINDOWS_CERTIFICATE_FILE,
-      certificatePassword: process.env.WINDOWS_CERTIFICATE_PASSWORD,
     }),
     // macOS ZIP
     new MakerZIP({}, ['darwin']),
@@ -51,15 +49,16 @@ const config: ForgeConfig = {
       name: 'FlashAppAI-Browser',
       format: 'ULFO',
     }, ['darwin']),
+    // Linux ZIP (universal)
+    new MakerZIP({}, ['linux']),
     // Linux DEB
     new MakerDeb({
       options: {
-        name: 'ai-dev-browser',
-        productName: 'AI Dev Browser',
+        name: 'flashappai-browser',
+        productName: 'FlashAppAI Browser',
         genericName: 'Web Browser',
         description: 'AI-powered browser for developers',
         categories: ['Development', 'Network', 'WebBrowser'],
-        icon: './assets/icons/icon.png',
         maintainer: 'FlashAppAI Team',
         homepage: 'https://flashappai.org',
       },
@@ -67,11 +66,10 @@ const config: ForgeConfig = {
     // Linux RPM
     new MakerRpm({
       options: {
-        name: 'ai-dev-browser',
-        productName: 'AI Dev Browser',
+        name: 'flashappai-browser',
+        productName: 'FlashAppAI Browser',
         description: 'AI-powered browser for developers',
         categories: ['Development', 'Network', 'WebBrowser'],
-        icon: './assets/icons/icon.png',
         homepage: 'https://flashappai.org',
       },
     }),

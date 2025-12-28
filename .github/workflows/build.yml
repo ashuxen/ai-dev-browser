@@ -58,13 +58,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: List output files
+        run: Get-ChildItem -Recurse out/make
+        shell: pwsh
+
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-x64
-          path: |
-            out/make/squirrel.windows/**/*.exe
-            out/make/squirrel.windows/**/*.nupkg
+          path: out/make/
+          if-no-files-found: warn
 
   build-linux:
     runs-on: ubuntu-latest
@@ -81,7 +84,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y rpm libarchive-tools
+          sudo apt-get install -y rpm dpkg fakeroot
 
       - name: Install dependencies
         run: npm install
@@ -91,13 +94,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: List output files
+        run: find out/make -type f
+
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-x64
-          path: |
-            out/make/deb/**/*.deb
-            out/make/rpm/**/*.rpm
+          path: out/make/
+          if-no-files-found: warn
 
   release:
     needs: [build-macos, build-windows, build-linux]
