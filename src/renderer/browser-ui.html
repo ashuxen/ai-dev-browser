@@ -283,6 +283,19 @@
       color: var(--accent-teal);
     }
 
+    /* Phantom Mode Button */
+    .phantom-btn {
+      font-size: 16px;
+      background: linear-gradient(135deg, #9333ea, #7c3aed) !important;
+      border: none !important;
+    }
+
+    .phantom-btn:hover {
+      background: linear-gradient(135deg, #a855f7, #8b5cf6) !important;
+      transform: scale(1.1);
+      box-shadow: 0 0 12px rgba(147, 51, 234, 0.5);
+    }
+
     /* ===== MAIN CONTENT ===== */
     .main-content {
       flex: 1;
@@ -524,11 +537,11 @@
       width: 420px;
       height: calc(100vh - 88px);
       background: var(--bg-secondary);
-      border-left: 1px solid var(--border-color);
+      border-left: 2px solid var(--accent-teal);
       display: none;
       flex-direction: column;
-      z-index: 100;
-      animation: slideInRight 0.3s ease;
+      z-index: 9999;
+      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
     }
 
     .ai-panel.open {
@@ -547,6 +560,65 @@
       padding: 12px 16px;
       background: var(--bg-tertiary);
       border-bottom: 1px solid var(--border-color);
+    }
+
+    .ai-panel-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ai-back-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: linear-gradient(135deg, var(--accent-teal), var(--accent-purple));
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+
+    .ai-back-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 2px 8px rgba(0, 217, 255, 0.4);
+    }
+    
+    /* Pending action styles */
+    .ai-pending-action {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: linear-gradient(135deg, rgba(0, 217, 255, 0.1), rgba(138, 43, 226, 0.1));
+      border-bottom: 1px solid var(--accent-teal);
+      gap: 10px;
+    }
+    
+    .pending-action-text {
+      font-size: 13px;
+      color: var(--accent-teal);
+      font-weight: 500;
+    }
+    
+    .pending-action-cancel {
+      padding: 4px 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    
+    .pending-action-cancel:hover {
+      background: var(--hover-bg);
+      color: var(--text-primary);
     }
 
     .ai-panel-title {
@@ -629,6 +701,54 @@
       color: var(--text-primary);
     }
 
+    /* Current AI Service Bar */
+    .ai-current-service {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .ai-current-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .ai-current-icon {
+      font-size: 18px;
+    }
+
+    .ai-current-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .ai-current-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .ai-switch-btn {
+      padding: 6px 12px;
+      background: linear-gradient(135deg, var(--accent-teal), var(--accent-purple));
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .ai-switch-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 2px 10px rgba(0, 217, 255, 0.3);
+    }
+
     .ai-quick-actions {
       display: flex;
       gap: 8px;
@@ -667,16 +787,21 @@
     .ai-webview-container {
       flex: 1;
       position: relative;
-      background: var(--bg-primary);
+      background: var(--bg-tertiary);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      border-top: 1px solid var(--border-color);
     }
 
     .ai-webview-info {
       text-align: center;
-      padding: 20px;
+      padding: 40px 20px;
+    }
+
+    .ai-webview-info p {
+      margin-bottom: 8px;
     }
 
     .ai-panel-resize {
@@ -1275,6 +1400,9 @@
             <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
           </svg>
         </button>
+        <button class="action-btn phantom-btn" id="phantomBtn" data-tooltip="Phantom Mode">
+          👻
+        </button>
       </div>
     </div>
   </div>
@@ -1330,11 +1458,18 @@
     </div>
 
     <!-- AI Panel (Right Side) -->
-    <div class="ai-panel" id="aiPanel">
+    <div class="ai-panel" id="aiPanel" style="display: none;">
       <div class="ai-panel-header">
-        <div class="ai-panel-title">
-          <span class="ai-panel-icon">⚡</span>
-          AI Assistant
+        <div class="ai-panel-title-row">
+          <button class="ai-back-btn" id="aiBackBtn" title="Back to AI Selection">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+          </button>
+          <div class="ai-panel-title">
+            <span class="ai-panel-icon">⚡</span>
+            <span id="aiPanelTitleText">AI Assistant</span>
+          </div>
         </div>
         <div class="ai-panel-actions">
           <button class="ai-panel-btn" id="aiPanelMinimize" title="Minimize">−</button>
@@ -1342,38 +1477,63 @@
         </div>
       </div>
       
-      <!-- AI Service Selector -->
-      <div class="ai-service-selector">
+      <!-- AI Service Selector (shown when no service loaded) -->
+      <div class="ai-service-selector" id="aiServiceSelector">
         <select id="aiServiceSelect" class="ai-service-dropdown">
           <option value="" disabled selected>⚡ Select AI Assistant...</option>
-          <option value="https://chat.openai.com">🤖 ChatGPT</option>
-          <option value="https://gemini.google.com">✨ Google Gemini</option>
-          <option value="https://claude.ai">🧠 Claude</option>
-          <option value="https://copilot.microsoft.com">💠 Microsoft Copilot</option>
-          <option value="https://www.perplexity.ai">🔍 Perplexity</option>
-          <option value="https://huggingface.co/chat">🤗 HuggingChat</option>
-          <option value="https://poe.com">💬 Poe</option>
-          <option value="https://www.phind.com">👨‍💻 Phind (Dev)</option>
-          <option value="https://you.com">🔎 You.com</option>
+          <optgroup label="🆓 No Login Required">
+            <option value="https://duckduckgo.com/?q=&ia=chat">🦆 DuckDuckGo AI (Free)</option>
+            <option value="https://www.perplexity.ai">🔍 Perplexity (Free)</option>
+            <option value="https://www.phind.com">👨‍💻 Phind - Dev (Free)</option>
+            <option value="https://you.com/search?q=&tbm=youchat">🔎 You.com (Free)</option>
+            <option value="https://labs.perplexity.ai">🧪 Perplexity Labs (Free)</option>
+          </optgroup>
+          <optgroup label="📧 Login Optional/Required">
+            <option value="https://copilot.microsoft.com">💠 Microsoft Copilot</option>
+            <option value="https://gemini.google.com">✨ Google Gemini</option>
+            <option value="https://huggingface.co/chat">🤗 HuggingChat</option>
+            <option value="https://chat.openai.com">🤖 ChatGPT (Login)</option>
+            <option value="https://claude.ai">🧠 Claude (Login)</option>
+            <option value="https://poe.com">💬 Poe (Login)</option>
+          </optgroup>
         </select>
-        <button class="ai-reload-btn" id="aiReloadBtn" title="Reload">↻</button>
       </div>
 
-      <!-- Quick Actions -->
-      <div class="ai-quick-actions">
-        <button class="ai-action-btn" id="aiSummarize" title="Summarize current page">
+      <!-- Current AI Service Bar (shown when service is loaded) -->
+      <div class="ai-current-service" id="aiCurrentService" style="display: none;">
+        <div class="ai-current-info">
+          <span class="ai-current-icon" id="aiCurrentIcon">🤖</span>
+          <span class="ai-current-name" id="aiCurrentName">ChatGPT</span>
+        </div>
+        <div class="ai-current-actions">
+          <button class="ai-switch-btn" id="aiSwitchBtn" title="Switch AI">Switch</button>
+          <button class="ai-reload-btn" id="aiReloadBtn" title="Reload">↻</button>
+        </div>
+      </div>
+
+      <!-- Quick Actions - Direct actions using Perplexity -->
+      <div class="ai-quick-actions" id="aiQuickActions">
+        <button class="ai-action-btn" id="aiSummarize" title="Summarize current page with Perplexity">
           <span>📄</span> Summarize Page
         </button>
-        <button class="ai-action-btn" id="aiExplainCode" title="Explain selected code">
-          <span>📝</span> Explain Code
+        <button class="ai-action-btn" id="aiExplainCode" title="Explain code on page with Perplexity">
+          <span>💻</span> Explain Code
         </button>
       </div>
 
       <!-- AI BrowserView Container (content managed by main process) -->
       <div class="ai-webview-container" id="aiWebviewContainer">
-        <div class="ai-webview-info">
-          <p style="font-size: 13px; color: var(--text-secondary);">AI Assistant loads here</p>
-          <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Select a service above to start</p>
+        <div class="ai-webview-info" id="aiWebviewInfo">
+          <div style="font-size: 48px; margin-bottom: 16px;">⚡</div>
+          <p style="font-size: 16px; color: var(--text-primary); font-weight: 600;">Select an AI Assistant</p>
+          <p style="font-size: 13px; color: var(--text-muted); margin-top: 8px;">Choose from the dropdown above</p>
+          <div style="margin-top: 24px; padding: 16px; background: var(--bg-primary); border-radius: 12px; text-align: left;">
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">✨ All AI services are FREE to use:</p>
+            <p style="font-size: 11px; color: var(--text-muted); line-height: 1.8;">
+              🤖 ChatGPT • ✨ Gemini • 🧠 Claude<br>
+              💠 Copilot • 🔍 Perplexity • 🤗 HuggingChat
+            </p>
+          </div>
         </div>
       </div>
 
@@ -1400,6 +1560,7 @@
     const bookmarkBtn = document.getElementById('bookmarkBtn');
     const historyBtn = document.getElementById('historyBtn');
     const aiBtn = document.getElementById('aiBtn');
+    const phantomBtn = document.getElementById('phantomBtn');
     
     // Sidebars
     const bookmarksSidebar = document.getElementById('bookmarksSidebar');
@@ -1592,126 +1753,293 @@
     }
 
     // ===== AI PANEL =====
-    const aiPanel = document.getElementById('aiPanel');
-    const aiServiceSelect = document.getElementById('aiServiceSelect');
-    const mainContent = document.querySelector('.main-content');
     let aiPanelWidth = 420;
     let aiPanelIsOpen = false;
+    let aiServiceLoaded = false;
 
-    async function toggleAIPanel() {
+    function toggleAIPanel() {
+      console.log('Toggle AI Panel clicked');
+      const panel = document.getElementById('aiPanel');
+      
+      if (!panel) {
+        console.error('AI Panel element not found!');
+        return;
+      }
+      
       if (aiPanelIsOpen) {
-        await closeAIPanel();
+        closeAIPanel();
       } else {
-        await openAIPanel();
+        openAIPanel();
       }
     }
 
     async function openAIPanel() {
-      // Just show the panel UI - don't load any AI service yet
-      aiPanel.classList.add('open');
-      mainContent.classList.add('ai-open');
-      aiBtn.classList.add('active');
+      console.log('Opening AI Panel');
+      const panel = document.getElementById('aiPanel');
+      const content = document.querySelector('.main-content');
+      const select = document.getElementById('aiServiceSelect');
+      
+      // IMPORTANT: Tell main process to shrink the webpage to make room for AI panel
+      if (window.electron?.aiPanel) {
+        await window.electron.aiPanel.resize(420); // Reserve 420px for AI panel
+      }
+      
+      if (panel) {
+        panel.classList.add('open');
+        panel.style.display = 'flex';
+        console.log('Panel opened');
+      }
+      if (content) content.classList.add('ai-open');
+      if (aiBtn) aiBtn.classList.add('active');
+      
       aiPanelIsOpen = true;
       
       // Close other sidebars
-      bookmarksSidebar.classList.remove('open');
-      historySidebar.classList.remove('open');
-      bookmarkBtn.classList.remove('active');
-      historyBtn.classList.remove('active');
+      if (bookmarksSidebar) bookmarksSidebar.classList.remove('open');
+      if (historySidebar) historySidebar.classList.remove('open');
+      if (bookmarkBtn) bookmarkBtn.classList.remove('active');
+      if (historyBtn) historyBtn.classList.remove('active');
       
-      // Reset dropdown to show placeholder
-      aiServiceSelect.selectedIndex = 0;
+      // Reset dropdown
+      if (select) select.selectedIndex = 0;
     }
 
     async function closeAIPanel() {
-      if (aiServiceLoaded) {
+      console.log('Closing AI Panel');
+      const panel = document.getElementById('aiPanel');
+      const content = document.querySelector('.main-content');
+      
+      // Close the AI BrowserView if loaded
+      if (aiServiceLoaded && window.electron?.aiPanel) {
         await window.electron.aiPanel.close();
       }
       
-      aiPanel.classList.remove('open');
-      mainContent.classList.remove('ai-open');
-      aiBtn.classList.remove('active');
+      // Tell main process to expand webpage back to full width
+      if (window.electron?.aiPanel) {
+        await window.electron.aiPanel.resize(0);
+      }
+      
+      if (panel) {
+        panel.classList.remove('open');
+        panel.style.display = 'none';
+      }
+      if (content) content.classList.remove('ai-open');
+      if (aiBtn) aiBtn.classList.remove('active');
+      
       aiPanelIsOpen = false;
       aiServiceLoaded = false;
       
-      // Reset dropdown
-      aiServiceSelect.selectedIndex = 0;
+      // Reset to selector view for next time
+      showAISelector();
     }
 
-    let aiServiceLoaded = false;
+    // AI service icons mapping
+    const aiServiceIcons = {
+      'duckduckgo.com': '🦆',
+      'perplexity.ai': '🔍',
+      'labs.perplexity.ai': '🧪',
+      'phind.com': '👨‍💻',
+      'you.com': '🔎',
+      'copilot.microsoft.com': '💠',
+      'gemini.google.com': '✨',
+      'huggingface.co': '🤗',
+      'chat.openai.com': '🤖',
+      'claude.ai': '🧠',
+      'poe.com': '💬'
+    };
+
+    function showAISelector() {
+      const selector = document.getElementById('aiServiceSelector');
+      const currentBar = document.getElementById('aiCurrentService');
+      const quickActions = document.querySelector('.ai-quick-actions');
+      const infoArea = document.getElementById('aiWebviewInfo');
+      
+      if (selector) selector.style.display = 'flex';
+      if (currentBar) currentBar.style.display = 'none';
+      if (quickActions) quickActions.style.display = 'flex';
+      if (infoArea) infoArea.style.display = 'block';
+      
+      // Reset dropdown
+      const select = document.getElementById('aiServiceSelect');
+      if (select) select.selectedIndex = 0;
+    }
+
+    function showAICurrentService(serviceName, serviceIcon) {
+      const selector = document.getElementById('aiServiceSelector');
+      const currentBar = document.getElementById('aiCurrentService');
+      const quickActions = document.querySelector('.ai-quick-actions');
+      const infoArea = document.getElementById('aiWebviewInfo');
+      const nameEl = document.getElementById('aiCurrentName');
+      const iconEl = document.getElementById('aiCurrentIcon');
+      
+      if (selector) selector.style.display = 'none';
+      if (currentBar) currentBar.style.display = 'flex';
+      if (quickActions) quickActions.style.display = 'none';
+      if (infoArea) infoArea.style.display = 'none';
+      if (nameEl) nameEl.textContent = serviceName;
+      if (iconEl) iconEl.textContent = serviceIcon;
+    }
 
     function setupAIPanel() {
-      // Service selector - load selected AI service
-      aiServiceSelect.addEventListener('change', async (e) => {
-        const url = e.target.value;
-        if (!url) return;
-        
-        // Open the AI BrowserView with selected service
-        await window.electron.aiPanel.open(url);
-        aiServiceLoaded = true;
-        showToast(`Loading ${e.target.options[e.target.selectedIndex].text}...`);
-      });
+      console.log('Setting up AI Panel');
+      const select = document.getElementById('aiServiceSelect');
+      const reloadBtn = document.getElementById('aiReloadBtn');
+      const switchBtn = document.getElementById('aiSwitchBtn');
+      const closeBtn = document.getElementById('aiPanelClose');
+      const minimizeBtn = document.getElementById('aiPanelMinimize');
+      const backBtn = document.getElementById('aiBackBtn');
+      const summarizeBtn = document.getElementById('aiSummarize');
+      const explainBtn = document.getElementById('aiExplainCode');
+      const titleText = document.getElementById('aiPanelTitleText');
+      
+      // Back button - go back to selector (keep panel open)
+      if (backBtn) {
+        backBtn.addEventListener('click', async () => {
+          console.log('Back button clicked');
+          if (aiServiceLoaded && window.electron?.aiPanel) {
+            await window.electron.aiPanel.clear();  // Clear content, keep panel open
+          }
+          aiServiceLoaded = false;
+          showAISelector();
+          if (titleText) titleText.textContent = 'AI Assistant';
+          if (select) select.selectedIndex = 0;  // Reset dropdown
+          showToast('⬅️ Choose another AI assistant');
+        });
+      }
+      
+      // Service selector - load selected AI
+      if (select) {
+        select.addEventListener('change', async (e) => {
+          const url = e.target.value;
+          if (!url) return;
+          
+          const serviceName = e.target.options[e.target.selectedIndex].text;
+          const domain = new URL(url).hostname.replace('www.', '');
+          const icon = aiServiceIcons[domain] || '🤖';
+          const cleanName = serviceName.replace(/^[^\s]+\s/, '');
+          
+          console.log('Loading AI service:', cleanName);
+          showToast(`Loading ${cleanName}...`);
+          
+          if (window.electron?.aiPanel) {
+            await window.electron.aiPanel.open(url);
+            aiServiceLoaded = true;
+            showAICurrentService(cleanName, icon);
+            if (titleText) titleText.textContent = cleanName;
+          }
+        });
+      }
+
+      // Switch button - go back to selector (keep panel open)
+      if (switchBtn) {
+        switchBtn.addEventListener('click', async () => {
+          console.log('Switch button clicked');
+          if (window.electron?.aiPanel) {
+            await window.electron.aiPanel.clear();  // Clear content, keep panel open
+          }
+          aiServiceLoaded = false;
+          showAISelector();
+          if (titleText) titleText.textContent = 'AI Assistant';
+          if (select) select.selectedIndex = 0;  // Reset dropdown
+          showToast('🔄 Select a different AI');
+        });
+      }
 
       // Reload button
-      document.getElementById('aiReloadBtn').addEventListener('click', async () => {
-        if (aiServiceLoaded) {
-          await window.electron.aiPanel.reload();
-          showToast('🔄 Reloading AI service...');
-        } else {
-          showToast('⚡ Select an AI service first');
-        }
-      });
-
-      // Close/Minimize buttons
-      document.getElementById('aiPanelClose').addEventListener('click', closeAIPanel);
-      document.getElementById('aiPanelMinimize').addEventListener('click', closeAIPanel);
-
-      // Quick actions - copy prompts for AI
-      document.getElementById('aiSummarize').addEventListener('click', () => {
-        const url = urlBar.value;
-        const prompt = `Please summarize this webpage: ${url}`;
-        navigator.clipboard.writeText(prompt).then(() => {
-          showToast('📋 Copied! Paste into the AI chat.');
-        });
-      });
-
-      document.getElementById('aiExplainCode').addEventListener('click', () => {
-        const prompt = 'Please explain this code:\n\n[Paste your code here]';
-        navigator.clipboard.writeText(prompt).then(() => {
-          showToast('📋 Select code → Copy → Paste into AI');
-        });
-      });
-
-      // Resize functionality
-      const resizeHandle = document.getElementById('aiPanelResize');
-      let isResizing = false;
-
-      resizeHandle.addEventListener('mousedown', (e) => {
-        isResizing = true;
-        document.body.style.cursor = 'ew-resize';
-        document.body.style.userSelect = 'none';
-        
-        const handleMouseMove = async (e) => {
-          if (!isResizing) return;
-          const newWidth = window.innerWidth - e.clientX;
-          if (newWidth >= 320 && newWidth <= 800) {
-            aiPanelWidth = newWidth;
-            aiPanel.style.width = newWidth + 'px';
-            await window.electron.aiPanel.resize(newWidth);
+      if (reloadBtn) {
+        reloadBtn.addEventListener('click', async () => {
+          if (aiServiceLoaded && window.electron?.aiPanel) {
+            await window.electron.aiPanel.reload();
+            showToast('🔄 Reloading...');
           }
-        };
-        
-        const handleMouseUp = () => {
-          isResizing = false;
-          document.body.style.cursor = '';
-          document.body.style.userSelect = '';
-          document.removeEventListener('mousemove', handleMouseMove);
-          document.removeEventListener('mouseup', handleMouseUp);
-        };
-        
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
-      });
+        });
+      }
+
+      // Close buttons
+      if (closeBtn) closeBtn.addEventListener('click', closeAIPanel);
+      if (minimizeBtn) minimizeBtn.addEventListener('click', closeAIPanel);
+
+      // Quick actions - Direct action with reliable AI (Perplexity)
+      if (summarizeBtn) {
+        summarizeBtn.addEventListener('click', async () => {
+          showToast('📄 Getting page content...');
+          
+          try {
+            const pageData = await window.electron.tabs.getPageContent();
+            console.log('Page data:', pageData);
+            
+            if (!pageData || !pageData.content) {
+              showToast('❌ Could not extract page content');
+              return;
+            }
+            
+            // Truncate content for URL safety
+            const truncatedContent = pageData.content.substring(0, 1200);
+            const query = encodeURIComponent(
+              `Summarize this webpage:\n\nTitle: ${pageData.title}\nURL: ${pageData.url}\n\nContent:\n${truncatedContent}`
+            );
+            
+            // Use Perplexity - reliable, free, no login
+            const aiUrl = `https://www.perplexity.ai/search?q=${query}`;
+            
+            console.log('Summarize with Perplexity');
+            if (window.electron?.aiPanel) {
+              await window.electron.aiPanel.open(aiUrl);
+              aiServiceLoaded = true;
+              showAICurrentService('Perplexity', '🔍');
+              if (titleText) titleText.textContent = 'Perplexity';
+              showToast('🔍 Summarizing with Perplexity...');
+            }
+          } catch (e) {
+            console.error('Summarize error:', e);
+            showToast('❌ Failed to get page content');
+          }
+        });
+      }
+
+      if (explainBtn) {
+        explainBtn.addEventListener('click', async () => {
+          showToast('💻 Scanning page for code...');
+          
+          try {
+            const codeData = await window.electron.tabs.getCodeContent();
+            console.log('Code scan result:', codeData);
+            
+            if (!codeData || !codeData.code || codeData.code.trim().length < 10) {
+              showToast('⚠️ No code found. Select code or visit a page with code blocks.');
+              return;
+            }
+            
+            const source = codeData.source === 'selection' ? 'selected' : 'found';
+            const foundMsg = codeData.totalFound > 1 ? ` (${codeData.totalFound} blocks)` : '';
+            showToast(`✅ Code ${source}${foundMsg}`);
+            
+            // Truncate for URL safety
+            const truncatedCode = codeData.code.substring(0, 1200);
+            const lang = codeData.language !== 'auto' ? codeData.language : '';
+            const query = encodeURIComponent(
+              `Explain this${lang ? ' ' + lang : ''} code:\n\n\`\`\`${lang}\n${truncatedCode}\n\`\`\``
+            );
+            
+            // Use Perplexity - reliable for code too
+            const aiUrl = `https://www.perplexity.ai/search?q=${query}`;
+            
+            console.log('Explain with Perplexity');
+            if (window.electron?.aiPanel) {
+              await window.electron.aiPanel.open(aiUrl);
+              aiServiceLoaded = true;
+              showAICurrentService('Perplexity', '🔍');
+              if (titleText) titleText.textContent = 'Perplexity';
+              showToast(`🔍 Explaining ${source} code...`);
+            }
+          } catch (e) {
+            console.error('Explain error:', e);
+            showToast('❌ Failed to scan for code');
+          }
+        });
+      }
+
+      console.log('AI Panel setup complete');
     }
 
     // Toast notification
@@ -1808,6 +2136,14 @@
 
       aiBtn.addEventListener('click', () => {
         toggleAIPanel();
+      });
+
+      // 👻 Phantom Mode button
+      phantomBtn.addEventListener('click', async () => {
+        showToast('👻 Opening Phantom Mode...');
+        if (window.electron?.app?.openPhantomMode) {
+          await window.electron.app.openPhantomMode();
+        }
       });
 
       // Sidebar close buttons

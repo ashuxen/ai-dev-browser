@@ -48,9 +48,7 @@ const config: ForgeConfig = {
     new MakerZIP({}, ['darwin']),
     // macOS DMG
     new MakerDMG({
-      name: 'AI-Dev-Browser',
-      icon: './assets/icons/icon.icns',
-      background: './assets/dmg-background.png',
+      name: 'FlashAppAI-Browser',
       format: 'ULFO',
     }, ['darwin']),
     // Linux DEB
@@ -104,7 +102,7 @@ const config: ForgeConfig = {
       name: '@electron-forge/publisher-github',
       config: {
         repository: {
-          owner: 'flashappai',
+          owner: 'ashuxen',
           name: 'ai-dev-browser',
         },
         prerelease: false,

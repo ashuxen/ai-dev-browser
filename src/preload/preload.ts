@@ -10,6 +10,9 @@ export interface TabAPI {
   forward: () => Promise<void>;
   reload: () => Promise<void>;
   getAll: () => Promise<any[]>;
+  getPageContent: () => Promise<{ content: string; url: string; title: string }>;
+  getSelectedText: () => Promise<string>;
+  getCodeContent: () => Promise<{ code: string; language: string; url: string; title: string; source?: string; totalFound?: number }>;
   onUpdate: (callback: (data: any) => void) => void;
 }
 
@@ -37,6 +40,7 @@ export interface CodeServerAPI {
 export interface AIPanelAPI {
   open: (url?: string) => Promise<any>;
   close: () => Promise<any>;
+  clear: () => Promise<any>;  // Clear content but keep panel open
   setUrl: (url: string) => Promise<any>;
   reload: () => Promise<any>;
   resize: (width: number) => Promise<any>;
@@ -67,6 +71,7 @@ export interface AppAPI {
   platform: () => Promise<string>;
   isDarkMode: () => Promise<boolean>;
   onThemeChange: (callback: (isDark: boolean) => void) => void;
+  openPhantomMode: () => Promise<any>;  // 👻 Phantom Mode
 }
 
 export interface DownloadAPI {
@@ -115,6 +120,9 @@ contextBridge.exposeInMainWorld('electron', {
     forward: () => ipcRenderer.invoke('tab:forward'),
     reload: () => ipcRenderer.invoke('tab:reload'),
     getAll: () => ipcRenderer.invoke('tab:get-all'),
+    getPageContent: () => ipcRenderer.invoke('tab:get-page-content'),
+    getSelectedText: () => ipcRenderer.invoke('tab:get-selected-text'),
+    getCodeContent: () => ipcRenderer.invoke('tab:get-code-content'),
     onUpdate: (callback: (data: any) => void) => {
       ipcRenderer.on('tabs-updated', (_event, data) => callback(data));
     },
@@ -149,6 +157,7 @@ contextBridge.exposeInMainWorld('electron', {
   aiPanel: {
     open: (url?: string) => ipcRenderer.invoke('ai-panel:open', url),
     close: () => ipcRenderer.invoke('ai-panel:close'),
+    clear: () => ipcRenderer.invoke('ai-panel:clear'),  // Clear content, keep panel open
     setUrl: (url: string) => ipcRenderer.invoke('ai-panel:set-url', url),
     reload: () => ipcRenderer.invoke('ai-panel:reload'),
     resize: (width: number) => ipcRenderer.invoke('ai-panel:resize', width),
@@ -190,6 +199,7 @@ contextBridge.exposeInMainWorld('electron', {
     onThemeChange: (callback: (isDark: boolean) => void) => {
       ipcRenderer.on('theme-changed', (_event, isDark) => callback(isDark));
     },
+    openPhantomMode: () => ipcRenderer.invoke('phantom:open'),  // 👻 Phantom Mode
   },
 
   // Downloads

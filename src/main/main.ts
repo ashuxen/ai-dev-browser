@@ -37,6 +37,7 @@ interface Tab {
 
 class FlashAppAIBrowser {
   private mainWindow: BrowserWindow | null = null;
+  private phantomWindows: Set<BrowserWindow> = new Set();  // Phantom Mode windows
   private tabs: Map<string, Tab> = new Map();
   private activeTabId: string | null = null;
   private tabIdCounter = 0;
@@ -247,12 +248,14 @@ class FlashAppAIBrowser {
     });
 
     // Update AI panel bounds if open
+    // Leave space for AI panel header (56px) + quick actions (50px) + selector (50px) = ~156px
+    const AI_PANEL_HEADER_HEIGHT = 200; // Header + selector + quick actions
     if (this.aiPanelView && this.aiPanelOpen) {
       this.aiPanelView.setBounds({
         x: bounds.width - aiWidth,
-        y: TOOLBAR_HEIGHT,
+        y: TOOLBAR_HEIGHT + AI_PANEL_HEADER_HEIGHT,
         width: aiWidth,
-        height: bounds.height - TOOLBAR_HEIGHT,
+        height: bounds.height - TOOLBAR_HEIGHT - AI_PANEL_HEADER_HEIGHT,
       });
     }
   }
@@ -283,15 +286,34 @@ class FlashAppAIBrowser {
   }
 
   private closeAIPanel() {
-    if (!this.mainWindow || !this.aiPanelView) return;
+    if (!this.mainWindow) return;
 
-    this.mainWindow.removeBrowserView(this.aiPanelView);
-    (this.aiPanelView.webContents as any).destroy?.();
-    this.aiPanelView = null;
+    // Remove BrowserView if exists
+    if (this.aiPanelView) {
+      this.mainWindow.removeBrowserView(this.aiPanelView);
+      (this.aiPanelView.webContents as any).destroy?.();
+      this.aiPanelView = null;
+    }
+    
     this.aiPanelOpen = false;
     this.updateTabBounds();
 
     console.log('🤖 AI Panel closed');
+  }
+
+  // Clear AI content but keep panel open (for back/switch)
+  private clearAIContent() {
+    if (!this.mainWindow) return;
+
+    // Just remove the BrowserView, keep panel open
+    if (this.aiPanelView) {
+      this.mainWindow.removeBrowserView(this.aiPanelView);
+      (this.aiPanelView.webContents as any).destroy?.();
+      this.aiPanelView = null;
+    }
+    
+    // Panel stays open, dimensions stay the same
+    console.log('🤖 AI content cleared (panel still open)');
   }
 
   private setAIPanelUrl(url: string) {
@@ -307,8 +329,68 @@ class FlashAppAIBrowser {
   }
 
   private resizeAIPanel(width: number) {
-    this.aiPanelWidth = Math.max(320, Math.min(800, width));
+    // Width of 0 means close/hide the AI panel area
+    if (width === 0) {
+      this.aiPanelWidth = 0;
+      this.aiPanelOpen = false;
+    } else {
+      this.aiPanelWidth = Math.max(320, Math.min(800, width));
+      this.aiPanelOpen = true;
+    }
     this.updateTabBounds();
+    console.log('🤖 AI Panel resized to:', this.aiPanelWidth);
+  }
+
+  // 👻 Phantom Mode - Private browsing with no traces
+  private createPhantomWindow() {
+    console.log('👻 Opening Phantom Mode...');
+    
+    // Create ephemeral session (in-memory only, no persistence)
+    const { session } = require('electron');
+    const phantomSession = session.fromPartition(`phantom-${Date.now()}`, { cache: false });
+    
+    const phantomWindow = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      minWidth: 800,
+      minHeight: 600,
+      titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+      trafficLightPosition: { x: 15, y: 15 },
+      backgroundColor: '#1a0a2e',  // Darker purple for Phantom Mode
+      title: '👻 Phantom Mode - FlashAppAI',
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.js'),
+        nodeIntegration: false,
+        contextIsolation: true,
+        webviewTag: true,
+        session: phantomSession,
+      },
+    });
+
+    // Load phantom mode UI
+    const phantomUIPath = path.join(app.getAppPath(), 'src/renderer/phantom-mode.html');
+    phantomWindow.loadFile(phantomUIPath).catch(() => {
+      // Fallback if phantom-mode.html doesn't exist yet
+      phantomWindow.loadURL('https://duckduckgo.com');
+    });
+
+    // Track phantom windows
+    this.phantomWindows.add(phantomWindow);
+    
+    phantomWindow.on('closed', () => {
+      this.phantomWindows.delete(phantomWindow);
+      console.log('👻 Phantom Mode window closed');
+    });
+
+    // Clear all data when window closes
+    phantomWindow.on('close', () => {
+      phantomSession.clearStorageData();
+      phantomSession.clearCache();
+      phantomSession.clearAuthCache();
+    });
+
+    console.log('👻 Phantom Mode window created');
+    return phantomWindow;
   }
 
   private notifyTabUpdate() {
@@ -396,6 +478,131 @@ class FlashAppAIBrowser {
       }));
     });
 
+    // Get page content for AI summarization
+    ipcMain.handle('tab:get-page-content', async () => {
+      const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
+      if (!tab) return { content: '', url: '', title: '' };
+
+      try {
+        // Extract text content from the page
+        const content = await tab.view.webContents.executeJavaScript(`
+          (function() {
+            // Remove scripts, styles, and hidden elements
+            const clone = document.body.cloneNode(true);
+            const scripts = clone.querySelectorAll('script, style, noscript, iframe, nav, header, footer');
+            scripts.forEach(el => el.remove());
+            
+            // Get main content if available
+            const main = clone.querySelector('main, article, [role="main"], .content, .post, .article');
+            const textSource = main || clone;
+            
+            // Get text and clean it up
+            let text = textSource.innerText || textSource.textContent || '';
+            text = text.replace(/\\s+/g, ' ').trim();
+            
+            // Limit to ~4000 chars for URL parameter safety
+            return text.substring(0, 4000);
+          })();
+        `);
+        
+        console.log('📄 Extracted page content:', content.substring(0, 100) + '...');
+        return {
+          content: content || '',
+          url: tab.url,
+          title: tab.title
+        };
+      } catch (e) {
+        console.error('Failed to extract page content:', e);
+        return { content: '', url: tab.url, title: tab.title };
+      }
+    });
+
+    // Get selected text from the page (for code explanation)
+    ipcMain.handle('tab:get-selected-text', async () => {
+      const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
+      if (!tab) return '';
+
+      try {
+        const selectedText = await tab.view.webContents.executeJavaScript(`
+          window.getSelection().toString();
+        `);
+        console.log('📝 Selected text:', selectedText?.substring(0, 100) + '...');
+        return selectedText || '';
+      } catch (e) {
+        console.error('Failed to get selected text:', e);
+        return '';
+      }
+    });
+
+    // Scan page for code blocks (for auto code explanation)
+    ipcMain.handle('tab:get-code-content', async () => {
+      const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
+      if (!tab) return { code: '', language: '', url: '', title: '' };
+
+      try {
+        const codeData = await tab.view.webContents.executeJavaScript(`
+          (function() {
+            // First check for selected text
+            const selection = window.getSelection().toString().trim();
+            if (selection && selection.length > 10) {
+              return { code: selection, language: 'auto', source: 'selection' };
+            }
+            
+            // Look for code blocks in priority order
+            const codeSelectors = [
+              'pre code',           // Standard code blocks
+              'code[class*="language-"]', // Prism/highlight.js
+              '.highlight pre',     // GitHub style
+              '.code-block',        // Generic
+              'pre.prettyprint',    // Google prettify
+              '.CodeMirror-code',   // CodeMirror
+              '.monaco-editor .view-lines', // Monaco
+              'pre',                // Plain pre tags
+              'code'                // Inline code (last resort)
+            ];
+            
+            let allCode = [];
+            
+            for (const selector of codeSelectors) {
+              const elements = document.querySelectorAll(selector);
+              for (const el of elements) {
+                const text = el.innerText || el.textContent || '';
+                if (text.trim().length > 20) {
+                  // Try to detect language from class
+                  let lang = 'auto';
+                  const classList = el.className || el.parentElement?.className || '';
+                  const langMatch = classList.match(/language-(\w+)|lang-(\w+)|(\w+)-code/);
+                  if (langMatch) {
+                    lang = langMatch[1] || langMatch[2] || langMatch[3];
+                  }
+                  allCode.push({ code: text.trim(), language: lang });
+                }
+              }
+            }
+            
+            // Return first substantial code block found
+            if (allCode.length > 0) {
+              // Sort by length, prefer longer code blocks
+              allCode.sort((a, b) => b.code.length - a.code.length);
+              return { ...allCode[0], source: 'scan', totalFound: allCode.length };
+            }
+            
+            return { code: '', language: '', source: 'none' };
+          })();
+        `);
+        
+        console.log('💻 Code scan result:', codeData?.source, 'found:', codeData?.totalFound || 0);
+        return {
+          ...codeData,
+          url: tab.url,
+          title: tab.title
+        };
+      } catch (e) {
+        console.error('Failed to scan for code:', e);
+        return { code: '', language: '', url: tab.url, title: tab.title };
+      }
+    });
+
     // Bookmarks
     ipcMain.handle('bookmark:add', (_e, bookmark: { url: string; title: string }) => {
       return this.bookmarkManager.add(bookmark);
@@ -438,6 +645,12 @@ class FlashAppAIBrowser {
 
     ipcMain.handle('ai-panel:close', () => {
       this.closeAIPanel();
+      return { success: true };
+    });
+
+    // Clear AI content but keep panel open (for back/switch buttons)
+    ipcMain.handle('ai-panel:clear', () => {
+      this.clearAIContent();
       return { success: true };
     });
 
@@ -524,6 +737,12 @@ class FlashAppAIBrowser {
     ipcMain.handle('app:platform', () => process.platform);
     ipcMain.handle('app:is-dark-mode', () => nativeTheme.shouldUseDarkColors);
 
+    // 👻 Phantom Mode
+    ipcMain.handle('phantom:open', () => {
+      this.createPhantomWindow();
+      return { success: true };
+    });
+
     console.log('✅ IPC handlers registered');
   }
 
@@ -557,6 +776,11 @@ class FlashAppAIBrowser {
             label: 'New Window',
             accelerator: 'CmdOrCtrl+N',
             click: () => this.createWindow(),
+          },
+          {
+            label: '👻 New Phantom Window',
+            accelerator: 'CmdOrCtrl+Shift+N',
+            click: () => this.createPhantomWindow(),
           },
         ],
       },
