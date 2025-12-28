@@ -1,210 +1,219 @@
-# AI Dev Browser
+# ⚡ FlashAppAI Browser
 
-<p align="center">
-  <img src="assets/icons/icon.png" alt="AI Dev Browser" width="128" height="128">
-</p>
+An AI-powered browser built for developers and scientists. Browse the web with integrated AI assistants, private browsing with Phantom Mode, and powerful developer tools.
 
-<p align="center">
-  <strong>An AI-powered browser for developers working with cloud-based code editors</strong>
-</p>
-
-<p align="center">
-  <a href="#features">Features</a> •
-  <a href="#installation">Installation</a> •
-  <a href="#development">Development</a> •
-  <a href="#building">Building</a>
-</p>
-
----
+![FlashAppAI Browser](https://flashappai.org/images/browser-preview.png)
 
 ## ✨ Features
 
-### 🔐 OAuth Authentication Bridge
-- **Universal OAuth callback handler** for cloud IDEs (code-server, GitHub Codespaces, Gitpod)
-- Supports all major providers: GitHub, Google, Microsoft, OpenAI, GitLab, Anthropic
-- Automatic token extraction and secure storage
-- Works with localhost, vscode://, and custom protocols
+### 🤖 AI Assistant Panel
+- **Multiple AI Services**: ChatGPT, Gemini, Claude, Perplexity, DuckDuckGo AI, and more
+- **Summarize Pages**: One-click page summarization with AI
+- **Explain Code**: Automatically detect and explain code on any webpage
+- **No API Keys Required**: Use free web-based AI services directly
 
-### 🤖 AI-Powered Assistance
-- **Code Explainer**: Select any code → Right-click → Get AI explanation
-- **Documentation Summarizer**: One-click summarization of long docs
-- **Smart Chat**: Context-aware AI assistant
-- Supports OpenAI GPT-4 and Anthropic Claude
+### 👻 Phantom Mode (Private Browsing)
+- **Zero Traces**: No history, cookies, or cache saved
+- **Auto-Clean**: All data wiped when you close the window
+- **Private AI**: Even AI conversations are private
+- **Keyboard Shortcut**: `Cmd+Shift+N` (Mac) / `Ctrl+Shift+N` (Windows/Linux)
 
-### 💻 Code-Server Integration
-- WebSocket connection for real-time communication
-- Send code snippets directly to your editor
-- OAuth tokens delivered to extensions automatically
-- Execute commands remotely
-
-### 🌐 Full Browser Functionality
-- Chromium-based rendering engine
-- Tabs, bookmarks, and history management
-- Built-in Developer Tools
-- Download manager
-- Auto-updates
-
-## 📦 Installation
-
-### Download Pre-built Binaries
-
-| Platform | Architecture | Download |
-|----------|--------------|----------|
-| macOS | Apple Silicon (M1/M2/M3) | [Download .dmg](https://github.com/flashappai/ai-dev-browser/releases/latest) |
-| macOS | Intel | [Download .dmg](https://github.com/flashappai/ai-dev-browser/releases/latest) |
-| Windows | x64 | [Download .exe](https://github.com/flashappai/ai-dev-browser/releases/latest) |
-| Windows | ARM64 | [Download .exe](https://github.com/flashappai/ai-dev-browser/releases/latest) |
-| Linux | x64 | [Download .deb / .rpm](https://github.com/flashappai/ai-dev-browser/releases/latest) |
-| Linux | ARM64 | [Download .deb / .rpm](https://github.com/flashappai/ai-dev-browser/releases/latest) |
-
-### Build from Source
-
-```bash
-# Clone the repository
-git clone https://github.com/flashappai/ai-dev-browser.git
-cd ai-dev-browser
-
-# Install dependencies
-npm install
-
-# Start in development mode
-npm start
-
-# Build for your platform
-npm run make
-```
-
-## 🔧 Development
-
-### Prerequisites
-
-- Node.js 18 or later
-- npm 9 or later
-- Git
-
-### Setup
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm start
-```
-
-### Project Structure
-
-```
-ai-dev-browser/
-├── src/
-│   ├── main/           # Electron main process
-│   │   ├── main.ts
-│   │   ├── oauth-bridge.ts
-│   │   ├── code-server-integration.ts
-│   │   ├── tab-manager.ts
-│   │   └── ...
-│   ├── preload/        # Preload scripts
-│   ├── renderer/       # React UI
-│   │   ├── components/
-│   │   ├── styles/
-│   │   └── App.tsx
-│   └── services/       # Shared services
-├── assets/             # Icons and images
-├── .github/            # GitHub Actions workflows
-└── forge.config.ts     # Electron Forge configuration
-```
-
-### Available Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm start` | Start in development mode |
-| `npm run package` | Package the app (no installer) |
-| `npm run make` | Create distributable installers |
-| `npm run lint` | Run ESLint |
-| `npm run typecheck` | Run TypeScript type checking |
-| `npm test` | Run tests |
-
-## 🏗️ Building
-
-### macOS
-
-```bash
-# Build for current architecture
-npm run make
-
-# Build for specific architecture
-npm run make -- --arch=arm64  # Apple Silicon
-npm run make -- --arch=x64    # Intel
-```
-
-For code signing, set these environment variables:
-- `APPLE_ID`
-- `APPLE_PASSWORD`
-- `APPLE_TEAM_ID`
-- `APPLE_IDENTITY`
-
-### Windows
-
-```bash
-npm run make -- --arch=x64
-```
-
-For code signing, set:
-- `WINDOWS_CERTIFICATE_FILE`
-- `WINDOWS_CERTIFICATE_PASSWORD`
-
-### Linux
-
-```bash
-# Install dependencies first
-sudo apt-get install rpm libarchive-tools
-
-npm run make
-```
-
-## ⚙️ Configuration
-
-### AI Settings
-
-1. Open Settings (⌘/Ctrl + ,)
-2. Go to "AI Settings" tab
-3. Enter your API keys:
-   - **OpenAI**: Get from [platform.openai.com](https://platform.openai.com/api-keys)
-   - **Anthropic**: Get from [console.anthropic.com](https://console.anthropic.com/settings/keys)
-
-### Code-Server Connection
-
-1. Click the code icon in the toolbar or use ⌘/Ctrl + Shift + C
-2. Enter your code-server URL
-3. The browser will establish a WebSocket connection
-
-## 🔒 Security
-
-- OAuth tokens are encrypted at rest using AES-256
-- All network communication uses TLS 1.3
-- Context isolation enabled in renderer
-- Sandboxed web content
-- No telemetry without explicit consent
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please read our [Contributing Guidelines](CONTRIBUTING.md) first.
-
-## 📬 Support
-
-- 📧 Email: support@flashappai.org
-- 🐛 Issues: [GitHub Issues](https://github.com/flashappai/ai-dev-browser/issues)
-- 💬 Discord: [Join our community](https://discord.gg/flashappai)
+### 🔖 Full Browser Features
+- **Tabbed Browsing**: Multiple tabs with easy management
+- **Bookmarks**: Save and organize your favorite sites
+- **History**: Track your browsing history
+- **Modern UI**: Beautiful dark theme inspired by FlashAppAI
 
 ---
 
-<p align="center">
-  Made with ❤️ by the <a href="https://flashappai.org">FlashAppAI</a> team
-</p>
+## 📥 Download & Install
 
+### macOS
 
+#### Option 1: DMG Installer (Recommended)
+1. Download `FlashAppAI-Browser.dmg` from [Releases](https://github.com/ashuxen/ai-dev-browser/releases)
+2. Double-click the DMG file to open it
+3. Drag **FlashAppAI Browser** to your **Applications** folder
+4. Open from Applications or Spotlight (`Cmd+Space`, type "FlashAppAI")
+
+#### Option 2: ZIP File
+1. Download `FlashAppAI-Browser-darwin-*.zip` from [Releases](https://github.com/ashuxen/ai-dev-browser/releases)
+2. Extract the ZIP file
+3. Move **AI Dev Browser.app** to your Applications folder
+4. Right-click → Open (first time only, to bypass Gatekeeper)
+
+#### macOS Security Note
+If you see "App is damaged" or "Cannot be opened":
+```bash
+# Run this in Terminal:
+xattr -cr /Applications/AI\ Dev\ Browser.app
+```
+
+---
+
+### Windows
+
+1. Download `FlashAppAI-Browser-win32-x64.zip` from [Releases](https://github.com/ashuxen/ai-dev-browser/releases)
+2. Extract the ZIP to a folder (e.g., `C:\Program Files\FlashAppAI Browser`)
+3. Double-click **ai-dev-browser.exe** to run
+4. (Optional) Right-click → Create shortcut → Move to Desktop
+
+#### Windows Security Note
+If Windows Defender blocks the app:
+1. Click "More info"
+2. Click "Run anyway"
+
+---
+
+### Linux
+
+#### Ubuntu/Debian
+1. Download `FlashAppAI-Browser-linux-x64.zip` from [Releases](https://github.com/ashuxen/ai-dev-browser/releases)
+2. Extract and run:
+```bash
+unzip FlashAppAI-Browser-linux-x64.zip
+cd "AI Dev Browser-linux-x64"
+./ai-dev-browser
+```
+
+#### Make it Executable (if needed)
+```bash
+chmod +x ai-dev-browser
+```
+
+#### Create Desktop Shortcut
+```bash
+cat > ~/.local/share/applications/flashappai-browser.desktop << EOF
+[Desktop Entry]
+Name=FlashAppAI Browser
+Exec=/path/to/ai-dev-browser
+Icon=/path/to/icon.png
+Type=Application
+Categories=Development;Network;WebBrowser;
+EOF
+```
+
+---
+
+## 🚀 Quick Start Guide
+
+### 1. Launch the Browser
+Open FlashAppAI Browser from your applications menu or desktop.
+
+### 2. Browse the Web
+- Enter any URL in the address bar
+- Use `Cmd+T` (Mac) / `Ctrl+T` (Windows/Linux) for new tabs
+- Navigate with back/forward buttons
+
+### 3. Use AI Assistant
+1. Click the **⚡ AI button** in the toolbar (top-right)
+2. Select an AI service from the dropdown:
+   - 🦆 **DuckDuckGo AI** - Free, no login
+   - 🔍 **Perplexity** - Fast answers, no login
+   - 🤖 **ChatGPT** - Requires login
+   - ✨ **Gemini** - Requires Google account
+3. Or use quick actions:
+   - **📄 Summarize Page** - AI summarizes the current webpage
+   - **💻 Explain Code** - AI explains code found on the page
+
+### 4. Use Phantom Mode
+1. Click the **👻 Ghost button** in the toolbar, OR
+2. Press `Cmd+Shift+N` (Mac) / `Ctrl+Shift+N` (Windows/Linux)
+3. Browse privately - nothing is saved!
+4. Close the window to erase all traces
+
+### 5. Manage Bookmarks & History
+- **Bookmark**: Click the 🔖 bookmark icon to save a page
+- **History**: Click the 🕐 history icon to view past visits
+- **Keyboard**: `Cmd+D` to bookmark, `Cmd+Y` for history
+
+---
+
+## ⌨️ Keyboard Shortcuts
+
+| Action | Mac | Windows/Linux |
+|--------|-----|---------------|
+| New Tab | `Cmd+T` | `Ctrl+T` |
+| Close Tab | `Cmd+W` | `Ctrl+W` |
+| New Window | `Cmd+N` | `Ctrl+N` |
+| Phantom Mode | `Cmd+Shift+N` | `Ctrl+Shift+N` |
+| Bookmark Page | `Cmd+D` | `Ctrl+D` |
+| Show History | `Cmd+Y` | `Ctrl+Y` |
+| Reload | `Cmd+R` | `Ctrl+R` |
+| Back | `Cmd+[` | `Alt+←` |
+| Forward | `Cmd+]` | `Alt+→` |
+| Find | `Cmd+F` | `Ctrl+F` |
+
+---
+
+## 🎯 Benefits
+
+### For Developers
+- **Code Explanation**: Select any code, click "Explain Code" - instant understanding
+- **Documentation Summary**: Quickly summarize long documentation pages
+- **Multiple AI Options**: Choose the best AI for your task
+- **Private Research**: Use Phantom Mode for sensitive research
+
+### For Scientists & Researchers
+- **Paper Summarization**: Summarize research papers instantly
+- **No Account Required**: Use free AI services without signing up
+- **Private Browsing**: Keep research confidential with Phantom Mode
+- **Cross-Platform**: Works on Mac, Windows, and Linux
+
+### For Everyone
+- **Ad-Free AI**: No ads or tracking in the AI panel
+- **Fast & Lightweight**: Built on Electron for native performance
+- **Beautiful UI**: Modern dark theme that's easy on the eyes
+- **Open Source**: Free to use and customize
+
+---
+
+## 🛠️ Troubleshooting
+
+### Browser won't start
+- **Mac**: Run `xattr -cr /Applications/AI\ Dev\ Browser.app` in Terminal
+- **Windows**: Run as Administrator once
+- **Linux**: Make sure the file is executable: `chmod +x ai-dev-browser`
+
+### AI Panel not loading
+1. Check your internet connection
+2. Try a different AI service (DuckDuckGo AI is most reliable)
+3. Click the ← back button and select again
+
+### Page not loading
+1. Check if the URL is correct (should include https://)
+2. Try refreshing with `Cmd+R` / `Ctrl+R`
+3. Check your internet connection
+
+---
+
+## 🔒 Privacy
+
+- **No Telemetry**: We don't collect any usage data
+- **No Accounts**: Use the browser without creating an account
+- **Phantom Mode**: Complete privacy with auto-delete
+- **Local Storage**: All bookmarks and history stored locally on your device
+
+---
+
+## 📝 License
+
+MIT License - Free to use, modify, and distribute.
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please see our [Contributing Guide](CONTRIBUTING.md).
+
+---
+
+## 📧 Support
+
+- **Email**: support@flashappai.org
+- **Issues**: [GitHub Issues](https://github.com/ashuxen/ai-dev-browser/issues)
+- **Website**: [flashappai.org](https://flashappai.org)
+
+---
+
+Made with ⚡ by [FlashAppAI](https://flashappai.org)
