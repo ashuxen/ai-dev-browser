@@ -306,7 +306,10 @@
 
     /* Sidebar */
     .sidebar {
+      position: relative;
       width: 320px;
+      min-width: 250px;
+      max-width: 50vw;
       background: var(--bg-secondary);
       border-right: 1px solid var(--border-color);
       display: none;
@@ -316,6 +319,42 @@
 
     .sidebar.open {
       display: flex;
+    }
+
+    /* Sidebar Resize Handle */
+    .sidebar-resize-handle {
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 6px;
+      height: 100%;
+      cursor: ew-resize;
+      background: transparent;
+      z-index: 10;
+      transition: background 0.2s;
+    }
+
+    .sidebar-resize-handle:hover,
+    .sidebar-resize-handle.dragging {
+      background: var(--accent-teal);
+    }
+
+    .sidebar-resize-handle::after {
+      content: '';
+      position: absolute;
+      right: 2px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 2px;
+      height: 40px;
+      background: var(--border-color);
+      border-radius: 2px;
+      transition: background 0.2s;
+    }
+
+    .sidebar-resize-handle:hover::after,
+    .sidebar-resize-handle.dragging::after {
+      background: var(--accent-teal);
     }
 
     @keyframes slideIn {
@@ -535,10 +574,12 @@
       position: fixed;
       top: 88px;
       right: 0;
-      width: 420px;
+      width: 400px;
+      min-width: 350px;
+      max-width: 60vw;
       height: calc(100vh - 88px);
       background: var(--bg-secondary);
-      border-left: 2px solid var(--accent-teal);
+      border-left: none;
       display: none;
       flex-direction: column;
       z-index: 9999;
@@ -547,6 +588,42 @@
 
     .ai-panel.open {
       display: flex;
+    }
+
+    /* AI Panel Resize Divider - Visible bar on the left edge */
+    .ai-panel-resize-handle {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 6px;
+      height: 100%;
+      cursor: ew-resize;
+      background: var(--accent-teal);
+      z-index: 10001;
+      transition: all 0.2s;
+    }
+
+    .ai-panel-resize-handle:hover,
+    .ai-panel-resize-handle.dragging {
+      background: var(--accent-purple);
+      width: 8px;
+      box-shadow: 0 0 10px var(--accent-purple);
+    }
+
+    /* Grip dots on the divider */
+    .ai-panel-resize-handle::before {
+      content: '⋮⋮';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 12px;
+      letter-spacing: -2px;
+    }
+
+    .ai-panel-resize-handle:hover::before {
+      color: white;
     }
 
     @keyframes slideInRight {
@@ -558,9 +635,10 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 12px 16px;
+      padding: 12px 16px 12px 20px; /* Extra left padding for divider */
       background: var(--bg-tertiary);
       border-bottom: 1px solid var(--border-color);
+      margin-left: 6px; /* Space for resize divider */
     }
 
     .ai-panel-title-row {
@@ -662,10 +740,11 @@
     .ai-service-selector {
       display: flex;
       align-items: center;
-      padding: 10px 12px;
+      padding: 10px 12px 10px 16px;
       gap: 8px;
       background: var(--bg-primary);
       border-bottom: 1px solid var(--border-color);
+      margin-left: 6px; /* Space for resize divider */
     }
 
     .ai-service-dropdown {
@@ -753,9 +832,10 @@
     .ai-quick-actions {
       display: flex;
       gap: 8px;
-      padding: 10px 12px;
+      padding: 10px 12px 10px 16px;
       background: var(--bg-primary);
       border-bottom: 1px solid var(--border-color);
+      margin-left: 6px; /* Space for resize divider */
     }
 
     .ai-action-btn {
@@ -794,6 +874,7 @@
       align-items: center;
       justify-content: center;
       border-top: 1px solid var(--border-color);
+      margin-left: 6px; /* Space for resize divider */
     }
 
     .ai-webview-info {
@@ -1351,24 +1432,30 @@
     /* ===== MENU DROPDOWN ===== */
     .menu-container {
       position: relative;
+      z-index: 99999;
     }
 
     .menu-btn {
       font-size: 16px;
+      color: var(--text-secondary) !important;
+    }
+
+    .menu-btn:hover {
+      color: var(--accent-teal) !important;
+      background: var(--hover-bg) !important;
     }
 
     .menu-dropdown {
-      position: absolute;
-      top: 100%;
-      right: 0;
-      margin-top: 8px;
+      position: fixed;
+      top: 80px;
+      right: 16px;
       width: 220px;
       background: var(--bg-secondary);
       border: 1px solid var(--border-color);
       border-radius: 12px;
-      box-shadow: var(--shadow);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
       display: none;
-      z-index: 10000;
+      z-index: 999999;
       animation: fadeIn 0.15s ease;
       overflow: hidden;
     }
@@ -1764,6 +1851,250 @@
       color: var(--text-muted);
       margin-top: 24px;
     }
+
+    /* ===== FIND BAR - Inline Toolbar Style ===== */
+    .find-bar-container {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 88px;
+      background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+      border-bottom: 2px solid var(--accent-teal);
+      z-index: 100000;
+      animation: slideDown 0.2s ease;
+    }
+
+    .find-bar-container.open {
+      display: block;
+    }
+
+    @keyframes slideDown {
+      from { 
+        opacity: 0; 
+        transform: translateY(-100%);
+      }
+      to { 
+        opacity: 1; 
+        transform: translateY(0);
+      }
+    }
+
+    .find-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      height: 100%;
+      padding: 0 20px;
+    }
+
+    .find-icon {
+      width: 20px;
+      height: 20px;
+      color: var(--accent-teal);
+      flex-shrink: 0;
+    }
+
+    .find-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-primary);
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      padding: 8px 16px;
+      transition: border-color 0.2s;
+    }
+
+    .find-input-wrapper:focus-within {
+      border-color: var(--accent-teal);
+      box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.2);
+    }
+
+    .find-input {
+      width: 280px;
+      padding: 0;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-size: 15px;
+      outline: none;
+    }
+
+    .find-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .find-results {
+      font-size: 12px;
+      color: var(--text-muted);
+      padding: 4px 10px;
+      background: var(--hover-bg);
+      border-radius: 12px;
+      white-space: nowrap;
+      min-width: 70px;
+      text-align: center;
+    }
+
+    .find-results.has-results {
+      color: var(--accent-teal);
+      background: rgba(0, 217, 255, 0.15);
+    }
+
+    .find-results.no-results {
+      color: #ef4444;
+      background: rgba(239, 68, 68, 0.15);
+    }
+
+    .find-nav {
+      display: flex;
+      gap: 4px;
+    }
+
+    .find-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: var(--hover-bg);
+      color: var(--text-secondary);
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .find-btn:hover {
+      background: var(--accent-teal);
+      color: white;
+    }
+
+    .find-btn:active {
+      transform: scale(0.9);
+    }
+
+    .find-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .find-close-btn {
+      background: transparent;
+      color: var(--text-muted);
+    }
+
+    .find-close-btn:hover {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .find-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-left: 8px;
+    }
+
+    .find-hint kbd {
+      display: inline-block;
+      padding: 2px 5px;
+      background: var(--hover-bg);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 10px;
+    }
+
+    /* ===== RECENTLY CLOSED DROPDOWN ===== */
+    .recently-closed-dropdown {
+      position: fixed;
+      top: 50px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 400px;
+      max-height: 400px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      z-index: 100001;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .recently-closed-dropdown.open {
+      display: flex;
+    }
+
+    .recently-closed-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .recently-closed-title {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .recently-closed-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .recently-closed-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .recently-closed-item:hover {
+      background: var(--hover-bg);
+    }
+
+    .recently-closed-favicon {
+      width: 16px;
+      height: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+    }
+
+    .recently-closed-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .recently-closed-item-title {
+      font-size: 13px;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .recently-closed-item-url {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .recently-closed-time {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
   </style>
 </head>
 <body>
@@ -1773,6 +2104,58 @@
       JavaScript is disabled or not working!
     </div>
   </noscript>
+
+  <!-- Find Bar - Inline Toolbar Style -->
+  <div class="find-bar-container" id="findBarContainer">
+    <div class="find-bar">
+      <svg class="find-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      
+      <div class="find-input-wrapper">
+        <input type="text" class="find-input" id="findInput" placeholder="Find on page..." autocomplete="off" />
+      </div>
+      
+      <span class="find-results" id="findResults">0 of 0</span>
+      
+      <div class="find-nav">
+        <button class="find-btn" id="findPrev" title="Previous (Shift+Enter)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="18 15 12 9 6 15"/>
+          </svg>
+        </button>
+        <button class="find-btn" id="findNext" title="Next (Enter)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <button class="find-btn find-close-btn" id="findClose" title="Close (Esc)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      
+      <span class="find-hint"><kbd>⏎</kbd> next · <kbd>⇧⏎</kbd> prev</span>
+    </div>
+  </div>
+
+  <!-- Recently Closed Tabs -->
+  <div class="recently-closed-dropdown" id="recentlyClosedDropdown">
+    <div class="recently-closed-header">
+      <span class="recently-closed-title">📋 Recently Closed Tabs</span>
+      <button class="find-btn" id="closeRecentlyClosed">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="recently-closed-list" id="recentlyClosedList">
+      <div style="padding: 20px; text-align: center; color: var(--text-muted);">
+        No recently closed tabs
+      </div>
+    </div>
+  </div>
   
   <!-- Header -->
   <div class="header">
@@ -1853,7 +2236,7 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
               </svg>
-              About FlashAppAI
+              About
             </button>
             <div class="menu-divider"></div>
             <button class="menu-item" id="menuDownloads">
@@ -1891,6 +2274,7 @@
   <div class="main-content">
     <!-- Bookmarks Sidebar -->
     <div class="sidebar" id="bookmarksSidebar">
+      <div class="sidebar-resize-handle" id="bookmarksResizeHandle"></div>
       <div class="sidebar-header">
         <span class="sidebar-title">
           <span class="sidebar-title-icon">★</span>
@@ -1915,6 +2299,7 @@
 
     <!-- History Sidebar -->
     <div class="sidebar" id="historySidebar">
+      <div class="sidebar-resize-handle" id="historyResizeHandle"></div>
       <div class="sidebar-header">
         <span class="sidebar-title">
           <span class="sidebar-title-icon">◷</span>
@@ -1939,6 +2324,8 @@
 
     <!-- AI Panel (Right Side) -->
     <div class="ai-panel" id="aiPanel" style="display: none;">
+      <!-- Resize handle -->
+      <div class="ai-panel-resize-handle" id="aiPanelResizeHandle"></div>
       <div class="ai-panel-header">
         <div class="ai-panel-title-row">
           <button class="ai-back-btn" id="aiBackBtn" title="Back to AI Selection">
@@ -2407,16 +2794,13 @@
         </div>
 
         <div class="help-section">
-          <h3 class="help-section-title"><span>🔗</span> Quick Links</h3>
+          <h3 class="help-section-title"><span>📧</span> Contact Support</h3>
           <ul class="help-list">
             <li>
-              <a href="https://flashappai.org/docs" target="_blank" style="color: var(--accent-teal); text-decoration: none;">📚 Full Documentation</a>
+              <a href="mailto:support@flashappai.org?subject=Bug Report - FlashAppAI Browser" style="color: var(--accent-teal); text-decoration: none;">🐛 Report a Bug - Send mail to support@flashappai.org</a>
             </li>
             <li>
-              <a href="https://github.com/flashappai/ai-dev-browser/issues" target="_blank" style="color: var(--accent-teal); text-decoration: none;">🐛 Report a Bug</a>
-            </li>
-            <li>
-              <a href="https://flashappai.org/feedback" target="_blank" style="color: var(--accent-teal); text-decoration: none;">💡 Request a Feature</a>
+              <a href="mailto:support@flashappai.org?subject=Feature Request - FlashAppAI Browser" style="color: var(--accent-teal); text-decoration: none;">💡 Request a Feature - Send mail to support@flashappai.org</a>
             </li>
           </ul>
         </div>
@@ -2454,24 +2838,42 @@
           </svg>
         </div>
         <div class="about-name">Flash<span>AppAI</span> Browser</div>
-        <div class="about-version" id="aboutVersion">Version 1.0.1</div>
+        <div class="about-version" id="aboutVersion">Version 1.1.0</div>
         <div class="about-desc">
-          A modern AI-powered browser built for developers. Browse the web with integrated AI assistants, private Phantom Mode, and developer-focused tools.
+          A secure, AI-powered browser built for developers and privacy-conscious users. Features integrated AI assistants, Tor-enabled Phantom Mode for anonymous browsing, and enterprise-grade security.
         </div>
+        
+        <div style="margin: 20px 0; padding: 16px; background: var(--bg-tertiary); border-radius: 12px; text-align: left;">
+          <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 12px;">📋 Browser Details</div>
+          <div style="font-size: 12px; color: var(--text-secondary); line-height: 2;">
+            <div><strong>Version:</strong> <span id="aboutVersionDetail">1.1.0</span></div>
+            <div><strong>Engine:</strong> Chromium (Electron)</div>
+            <div><strong>Platform:</strong> <span id="aboutPlatform">-</span></div>
+            <div><strong>Architecture:</strong> <span id="aboutArch">-</span></div>
+            <div><strong>Build:</strong> Production</div>
+          </div>
+        </div>
+        
         <div class="about-features">
           <div class="about-feature">
             <div class="about-feature-icon">🤖</div>
             <div class="about-feature-title">AI Powered</div>
           </div>
           <div class="about-feature">
-            <div class="about-feature-icon">👻</div>
-            <div class="about-feature-title">Phantom Mode</div>
+            <div class="about-feature-icon">🧅</div>
+            <div class="about-feature-title">Tor Enabled</div>
           </div>
           <div class="about-feature">
-            <div class="about-feature-icon">💻</div>
-            <div class="about-feature-title">Dev Focused</div>
+            <div class="about-feature-icon">🔐</div>
+            <div class="about-feature-title">Secure</div>
           </div>
         </div>
+        
+        <div style="margin: 16px 0; padding: 12px; background: linear-gradient(135deg, rgba(0, 217, 255, 0.1), rgba(168, 85, 247, 0.1)); border-radius: 10px; font-size: 11px; color: var(--text-muted); text-align: left;">
+          <strong style="color: var(--accent-teal);">🛡️ Security Features:</strong><br>
+          HTTPS Enforcement • Popup Blocking • Permission Manager • Certificate Validation • Anti-Fingerprinting • SSO Support
+        </div>
+        
         <div class="about-links">
           <button class="about-link" onclick="window.electron.tabs.navigate('https://flashappai.org')">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -2487,7 +2889,7 @@
           </button>
         </div>
         <div class="about-copyright">
-          © 2024 FlashAppAI. All rights reserved.
+          © 2024-2025 FlashAppAI. All rights reserved.
         </div>
       </div>
     </div>
@@ -2706,7 +3108,7 @@
     }
 
     // ===== AI PANEL =====
-    let aiPanelWidth = 420;
+    let aiPanelWidth = 400;
     let aiPanelIsOpen = false;
     let aiServiceLoaded = false;
 
@@ -2992,6 +3394,49 @@
         });
       }
 
+      // ===== AI PANEL RESIZE =====
+      const resizeHandle = document.getElementById('aiPanelResizeHandle');
+      if (resizeHandle && aiPanel) {
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+        
+        resizeHandle.addEventListener('mousedown', (e) => {
+          isResizing = true;
+          startX = e.clientX;
+          startWidth = aiPanel.offsetWidth;
+          resizeHandle.classList.add('dragging');
+          document.body.style.cursor = 'ew-resize';
+          document.body.style.userSelect = 'none';
+          e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+          if (!isResizing) return;
+          
+          const deltaX = startX - e.clientX;
+          const newWidth = Math.min(Math.max(300, startWidth + deltaX), window.innerWidth * 0.7);
+          
+          aiPanel.style.width = newWidth + 'px';
+          
+          // Update main process with new width
+          if (window.electron?.aiPanel) {
+            window.electron.aiPanel.resize(newWidth);
+          }
+        });
+        
+        document.addEventListener('mouseup', () => {
+          if (isResizing) {
+            isResizing = false;
+            resizeHandle.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+          }
+        });
+        
+        console.log('AI Panel resize handle initialized');
+      }
+
       console.log('AI Panel setup complete');
     }
 
@@ -2999,58 +3444,71 @@
     function setupMenu() {
       console.log('Setting up Menu');
       
-      // Toggle menu dropdown
+      // Use native menu (works above BrowserViews)
       if (menuBtn) {
+        console.log('Menu button found, adding native menu handler');
         menuBtn.addEventListener('click', (e) => {
+          e.preventDefault();
           e.stopPropagation();
-          menuDropdown.classList.toggle('open');
+          console.log('Menu button clicked - showing native menu');
+          
+          // Show native menu via IPC
+          if (window.electron && window.electron.menu) {
+            window.electron.menu.show('main');
+          } else {
+            console.error('Native menu API not available');
+            showToast('❌ Menu not available');
+          }
         });
+      } else {
+        console.error('Menu button not found');
       }
       
-      // Close menu when clicking outside
-      document.addEventListener('click', (e) => {
-        if (!menuDropdown.contains(e.target) && !menuBtn.contains(e.target)) {
-          menuDropdown.classList.remove('open');
-        }
-      });
-      
-      // Menu items
-      document.getElementById('menuSettings')?.addEventListener('click', () => {
-        menuDropdown.classList.remove('open');
-        openModal('settings');
-      });
-      
-      document.getElementById('menuHelp')?.addEventListener('click', () => {
-        menuDropdown.classList.remove('open');
-        openModal('help');
-      });
-      
-      document.getElementById('menuAbout')?.addEventListener('click', () => {
-        menuDropdown.classList.remove('open');
-        openModal('about');
-      });
-      
-      document.getElementById('menuDownloads')?.addEventListener('click', () => {
-        menuDropdown.classList.remove('open');
-        showToast('📥 Downloads feature coming soon!');
-      });
-      
-      document.getElementById('menuZoomIn')?.addEventListener('click', () => {
-        menuDropdown.classList.remove('open');
-        document.body.style.zoom = (parseFloat(document.body.style.zoom || '1') + 0.1).toString();
-        showToast('🔍 Zoomed in');
-      });
-      
-      document.getElementById('menuZoomOut')?.addEventListener('click', () => {
-        menuDropdown.classList.remove('open');
-        document.body.style.zoom = (parseFloat(document.body.style.zoom || '1') - 0.1).toString();
-        showToast('🔍 Zoomed out');
-      });
-      
-      document.getElementById('menuPrint')?.addEventListener('click', () => {
-        menuDropdown.classList.remove('open');
-        window.print();
-      });
+      // Listen for native menu actions
+      if (window.electron && window.electron.menu) {
+        window.electron.menu.onAction((action) => {
+          console.log('Menu action received:', action);
+          switch (action) {
+            case 'settings':
+              openModal('settings');
+              break;
+            case 'help':
+              openModal('help');
+              break;
+            case 'about':
+              openModal('about');
+              break;
+            case 'downloads':
+              showToast('📥 Opening downloads folder...');
+              break;
+            case 'data-cleared':
+              showToast('🧹 Browsing data cleared!');
+              break;
+            case 'ad-block-enabled':
+              showToast('🛡️ Ad Blocker enabled');
+              break;
+            case 'ad-block-disabled':
+              showToast('🛡️ Ad Blocker disabled');
+              break;
+            case 'tracker-block-enabled':
+              showToast('🔒 Tracker Blocker enabled');
+              break;
+            case 'tracker-block-disabled':
+              showToast('🔒 Tracker Blocker disabled');
+              break;
+            case 'find':
+              if (window.openFindBar) {
+                window.openFindBar();
+              }
+              break;
+            case 'recently-closed':
+              if (window.openRecentlyClosed) {
+                window.openRecentlyClosed();
+              }
+              break;
+          }
+        });
+      }
       
       // Close modal buttons
       document.getElementById('closeSettings')?.addEventListener('click', () => closeModal('settings'));
@@ -3058,11 +3516,12 @@
       document.getElementById('closeAbout')?.addEventListener('click', () => closeModal('about'));
       
       // Close modal on overlay click
-      [settingsModal, helpModal, aboutModal].forEach(modal => {
+      const modalNames = ['settings', 'help', 'about'];
+      [settingsModal, helpModal, aboutModal].forEach((modal, index) => {
         if (modal) {
           modal.addEventListener('click', (e) => {
             if (e.target === modal) {
-              modal.classList.remove('open');
+              closeModal(modalNames[index]);
             }
           });
         }
@@ -3099,38 +3558,285 @@
         el.addEventListener('change', saveSettings);
       });
       
-      // Set version in About modal
-      if (window.electron?.app?.version) {
+      // Set version and platform info in About modal
+      if (window.electron?.app) {
         window.electron.app.version().then(v => {
           const versionEl = document.getElementById('aboutVersion');
+          const versionDetailEl = document.getElementById('aboutVersionDetail');
           if (versionEl) versionEl.textContent = `Version ${v}`;
+          if (versionDetailEl) versionDetailEl.textContent = v;
+        });
+        
+        window.electron.app.platform().then(p => {
+          const platformEl = document.getElementById('aboutPlatform');
+          const archEl = document.getElementById('aboutArch');
+          if (platformEl) {
+            const platformNames = { darwin: 'macOS', win32: 'Windows', linux: 'Linux' };
+            platformEl.textContent = platformNames[p] || p;
+          }
+          if (archEl) {
+            archEl.textContent = navigator.userAgent.includes('arm64') ? 'ARM64 (Apple Silicon)' : 
+                                 navigator.userAgent.includes('x64') ? 'x64' : 'Unknown';
+          }
         });
       }
       
       console.log('Menu setup complete');
     }
+
+    // ===== FIND IN PAGE =====
+    function setupFindInPage() {
+      const findBarContainer = document.getElementById('findBarContainer');
+      const findInput = document.getElementById('findInput');
+      const findResults = document.getElementById('findResults');
+      const findPrev = document.getElementById('findPrev');
+      const findNext = document.getElementById('findNext');
+      const findClose = document.getElementById('findClose');
+
+      let currentSearchText = '';
+
+      // Open find bar with Ctrl/Cmd+F
+      document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+          e.preventDefault();
+          openFindBar();
+        }
+        // Close with Escape
+        if (e.key === 'Escape' && findBarContainer.classList.contains('open')) {
+          closeFindBar();
+        }
+      });
+
+      function openFindBar() {
+        findBarContainer.classList.add('open');
+        findInput.focus();
+        if (currentSearchText) {
+          findInput.select();
+        }
+      }
+
+      // Search on input
+      findInput.addEventListener('input', (e) => {
+        currentSearchText = e.target.value;
+        if (currentSearchText && window.electron?.find) {
+          window.electron.find.start(currentSearchText);
+        } else if (window.electron?.find) {
+          window.electron.find.stop();
+          findResults.textContent = '0 of 0';
+          findResults.classList.remove('has-results', 'no-results');
+        }
+      });
+
+      // Enter for next, Shift+Enter for previous
+      findInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (e.shiftKey) {
+            if (window.electron?.find) window.electron.find.previous(currentSearchText);
+          } else {
+            if (window.electron?.find) window.electron.find.next(currentSearchText);
+          }
+        }
+      });
+
+      // Navigation buttons
+      findPrev.addEventListener('click', () => {
+        if (currentSearchText && window.electron?.find) {
+          window.electron.find.previous(currentSearchText);
+        }
+      });
+
+      findNext.addEventListener('click', () => {
+        if (currentSearchText && window.electron?.find) {
+          window.electron.find.next(currentSearchText);
+        }
+      });
+
+      // Close button
+      findClose.addEventListener('click', closeFindBar);
+
+      function closeFindBar() {
+        findBarContainer.classList.remove('open');
+        if (window.electron?.find) window.electron.find.stop();
+        findInput.value = '';
+        currentSearchText = '';
+        findResults.textContent = '0 of 0';
+        findResults.classList.remove('has-results', 'no-results');
+      }
+
+      // Listen for find results
+      if (window.electron?.find) {
+        window.electron.find.onResult((result) => {
+          if (result.matches !== undefined) {
+            findResults.classList.remove('has-results', 'no-results');
+            if (result.matches > 0) {
+              findResults.textContent = `${result.activeMatchOrdinal || 1} of ${result.matches}`;
+              findResults.classList.add('has-results');
+            } else {
+              findResults.textContent = 'No matches';
+              findResults.classList.add('no-results');
+            }
+          }
+        });
+      }
+
+      // Expose openFindBar globally for menu action
+      window.openFindBar = openFindBar;
+
+      console.log('Find in Page setup complete');
+    }
+
+    // ===== RECENTLY CLOSED TABS =====
+    function setupRecentlyClosed() {
+      const dropdown = document.getElementById('recentlyClosedDropdown');
+      const list = document.getElementById('recentlyClosedList');
+      const closeBtn = document.getElementById('closeRecentlyClosed');
+
+      // Open with Ctrl/Cmd+Shift+T
+      document.addEventListener('keydown', async (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'T') {
+          e.preventDefault();
+          await loadAndShowRecentlyClosed();
+        }
+      });
+
+      closeBtn.addEventListener('click', async () => {
+        await closeRecentlyClosedDropdown();
+      });
+
+      // Close on click outside
+      document.addEventListener('click', async (e) => {
+        if (!dropdown.contains(e.target) && dropdown.classList.contains('open')) {
+          await closeRecentlyClosedDropdown();
+        }
+      });
+
+      async function closeRecentlyClosedDropdown() {
+        dropdown.classList.remove('open');
+        // Show BrowserViews again
+        if (window.electron?.views) {
+          await window.electron.views.show();
+        }
+      }
+
+      async function loadAndShowRecentlyClosed() {
+        if (!window.electron?.tabs?.getRecentlyClosed) return;
+        
+        // Hide BrowserViews so dropdown is visible
+        if (window.electron?.views) {
+          await window.electron.views.hide();
+        }
+        
+        const recentlyClosed = await window.electron.tabs.getRecentlyClosed();
+        
+        if (recentlyClosed.length === 0) {
+          list.innerHTML = `
+            <div style="padding: 20px; text-align: center; color: var(--text-muted);">
+              No recently closed tabs
+            </div>
+          `;
+        } else {
+          list.innerHTML = recentlyClosed.map(tab => {
+            const timeAgo = getTimeAgo(tab.closedAt);
+            let favicon = '';
+            try {
+              favicon = tab.url ? `https://www.google.com/s2/favicons?domain=${new URL(tab.url).hostname}&sz=32` : '';
+            } catch (e) {
+              favicon = '';
+            }
+            return `
+              <div class="recently-closed-item" data-id="${tab.id}" data-url="${tab.url}">
+                <div class="recently-closed-favicon">
+                  ${favicon ? `<img src="${favicon}" width="16" height="16" onerror="this.style.display='none'">` : '📄'}
+                </div>
+                <div class="recently-closed-info">
+                  <div class="recently-closed-item-title">${tab.title || 'Untitled'}</div>
+                  <div class="recently-closed-item-url">${tab.url}</div>
+                </div>
+                <div class="recently-closed-time">${timeAgo}</div>
+              </div>
+            `;
+          }).join('');
+
+          // Add click handlers
+          list.querySelectorAll('.recently-closed-item').forEach(item => {
+            item.addEventListener('click', async () => {
+              const id = item.dataset.id;
+              if (window.electron?.tabs?.restoreClosed) {
+                await window.electron.tabs.restoreClosed(id);
+                await closeRecentlyClosedDropdown();
+              }
+            });
+          });
+        }
+
+        dropdown.classList.add('open');
+      }
+
+      function getTimeAgo(timestamp) {
+        const seconds = Math.floor((Date.now() - timestamp) / 1000);
+        if (seconds < 60) return 'Just now';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        return `${Math.floor(hours / 24)}d ago`;
+      }
+
+      // Expose for menu action
+      window.openRecentlyClosed = loadAndShowRecentlyClosed;
+
+      console.log('Recently Closed setup complete');
+    }
     
-    function openModal(modalName) {
+    async function openModal(modalName) {
+      console.log('Opening modal:', modalName);
+      
+      // Hide BrowserViews so modal is visible
+      if (window.electron && window.electron.views) {
+        await window.electron.views.hide();
+        console.log('BrowserViews hidden for modal');
+      }
+      
+      const settingsModalEl = document.getElementById('settingsModal');
+      const helpModalEl = document.getElementById('helpModal');
+      const aboutModalEl = document.getElementById('aboutModal');
+      
       const modalMap = {
-        settings: settingsModal,
-        help: helpModal,
-        about: aboutModal
+        settings: settingsModalEl,
+        help: helpModalEl,
+        about: aboutModalEl
       };
       const modal = modalMap[modalName];
+      console.log('Modal element found:', !!modal);
       if (modal) {
         modal.classList.add('open');
+        console.log('Modal opened successfully');
+      } else {
+        console.error('Modal not found:', modalName);
       }
     }
     
-    function closeModal(modalName) {
+    async function closeModal(modalName) {
+      console.log('Closing modal:', modalName);
+      const settingsModalEl = document.getElementById('settingsModal');
+      const helpModalEl = document.getElementById('helpModal');
+      const aboutModalEl = document.getElementById('aboutModal');
+      
       const modalMap = {
-        settings: settingsModal,
-        help: helpModal,
-        about: aboutModal
+        settings: settingsModalEl,
+        help: helpModalEl,
+        about: aboutModalEl
       };
       const modal = modalMap[modalName];
       if (modal) {
         modal.classList.remove('open');
+      }
+      
+      // Show BrowserViews again
+      if (window.electron && window.electron.views) {
+        await window.electron.views.show();
+        console.log('BrowserViews restored after modal close');
       }
     }
     
@@ -3297,11 +4003,65 @@
         renderHistory(e.target.value);
       });
 
+      // ===== SIDEBAR RESIZE FUNCTIONALITY =====
+      function setupSidebarResize(sidebarId, handleId) {
+        const sidebar = document.getElementById(sidebarId);
+        const handle = document.getElementById(handleId);
+        
+        if (!sidebar || !handle) {
+          console.log('Sidebar resize: elements not found', sidebarId, handleId);
+          return;
+        }
+        
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+        
+        handle.addEventListener('mousedown', (e) => {
+          isResizing = true;
+          startX = e.clientX;
+          startWidth = sidebar.offsetWidth;
+          handle.classList.add('dragging');
+          document.body.style.cursor = 'ew-resize';
+          document.body.style.userSelect = 'none';
+          e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+          if (!isResizing) return;
+          
+          const deltaX = e.clientX - startX;
+          const newWidth = Math.min(Math.max(250, startWidth + deltaX), window.innerWidth * 0.5);
+          
+          sidebar.style.width = newWidth + 'px';
+        });
+        
+        document.addEventListener('mouseup', () => {
+          if (isResizing) {
+            isResizing = false;
+            handle.classList.remove('dragging');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+          }
+        });
+        
+        console.log('Sidebar resize initialized for:', sidebarId);
+      }
+      
+      setupSidebarResize('bookmarksSidebar', 'bookmarksResizeHandle');
+      setupSidebarResize('historySidebar', 'historyResizeHandle');
+
       // AI Panel Setup
       setupAIPanel();
 
       // Menu Setup
       setupMenu();
+
+      // Find in Page Setup
+      setupFindInPage();
+
+      // Recently Closed Tabs Setup
+      setupRecentlyClosed();
 
       // Listen for tab updates
       window.electron.tabs.onUpdate((data) => {
@@ -3323,6 +4083,28 @@
       // Load initial data
       loadBookmarks();
       loadHistory();
+
+      // Handle fullscreen events from video players
+      window.electron.on('fullscreen-change', (isFullscreen) => {
+        console.log('🎬 Fullscreen change:', isFullscreen);
+        const toolbar = document.querySelector('.toolbar');
+        const tabBar = document.querySelector('.tab-bar');
+        const mainContent = document.querySelector('.main-content');
+        
+        if (isFullscreen) {
+          // Hide all browser UI for true fullscreen video
+          if (toolbar) toolbar.style.display = 'none';
+          if (tabBar) tabBar.style.display = 'none';
+          if (mainContent) mainContent.style.marginTop = '0';
+          document.body.style.overflow = 'hidden';
+        } else {
+          // Restore browser UI
+          if (toolbar) toolbar.style.display = '';
+          if (tabBar) tabBar.style.display = '';
+          if (mainContent) mainContent.style.marginTop = '';
+          document.body.style.overflow = '';
+        }
+      });
     }
 
     init();

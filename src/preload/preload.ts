@@ -93,6 +93,11 @@ export interface UpdateAPI {
   onStatus: (callback: (status: any) => void) => void;
 }
 
+export interface MenuAPI {
+  show: (menuType: string) => Promise<any>;
+  onAction: (callback: (action: string) => void) => void;
+}
+
 export interface ElectronAPI {
   tabs: TabAPI;
   bookmarks: BookmarkAPI;
@@ -104,6 +109,7 @@ export interface ElectronAPI {
   app: AppAPI;
   downloads: DownloadAPI;
   updates: UpdateAPI;
+  menu: MenuAPI;
   on: (channel: string, callback: (...args: any[]) => void) => void;
   off: (channel: string, callback: (...args: any[]) => void) => void;
 }
@@ -123,9 +129,42 @@ contextBridge.exposeInMainWorld('electron', {
     getPageContent: () => ipcRenderer.invoke('tab:get-page-content'),
     getSelectedText: () => ipcRenderer.invoke('tab:get-selected-text'),
     getCodeContent: () => ipcRenderer.invoke('tab:get-code-content'),
+    getRecentlyClosed: () => ipcRenderer.invoke('tabs:get-recently-closed'),
+    restoreClosed: (id: string) => ipcRenderer.invoke('tabs:restore-closed', id),
+    clearRecentlyClosed: () => ipcRenderer.invoke('tabs:clear-recently-closed'),
     onUpdate: (callback: (data: any) => void) => {
       ipcRenderer.on('tabs-updated', (_event, data) => callback(data));
     },
+  },
+
+  // Find in Page
+  find: {
+    start: (text: string, options?: any) => ipcRenderer.invoke('find:start', text, options),
+    next: (text: string) => ipcRenderer.invoke('find:next', text),
+    previous: (text: string) => ipcRenderer.invoke('find:previous', text),
+    stop: () => ipcRenderer.invoke('find:stop'),
+    onResult: (callback: (result: any) => void) => {
+      ipcRenderer.on('find:result', (_event, result) => callback(result));
+    },
+  },
+
+  // Developer Tools
+  devtools: {
+    toggle: () => ipcRenderer.invoke('devtools:toggle'),
+    open: () => ipcRenderer.invoke('devtools:open'),
+    close: () => ipcRenderer.invoke('devtools:close'),
+  },
+
+  // Screenshot
+  screenshot: {
+    capture: (options?: any) => ipcRenderer.invoke('screenshot:capture', options),
+  },
+
+  // Ad & Tracker Blocking
+  blocking: {
+    getStatus: () => ipcRenderer.invoke('blocking:get-status'),
+    setAdBlock: (enabled: boolean) => ipcRenderer.invoke('blocking:set-ad-block', enabled),
+    setTrackerBlock: (enabled: boolean) => ipcRenderer.invoke('blocking:set-tracker-block', enabled),
   },
 
   // Bookmark management
@@ -229,6 +268,20 @@ contextBridge.exposeInMainWorld('electron', {
     },
   },
 
+  // Native Menu (works above BrowserViews)
+  menu: {
+    show: (menuType: string) => ipcRenderer.invoke('menu:show', menuType),
+    onAction: (callback: (action: string) => void) => {
+      ipcRenderer.on('menu:action', (_event, action) => callback(action));
+    },
+  },
+
+  // Hide/Show BrowserViews (for modals to be visible)
+  views: {
+    hide: () => ipcRenderer.invoke('views:hide'),
+    show: () => ipcRenderer.invoke('views:show'),
+  },
+
   // Generic event handlers
   on: (channel: string, callback: (...args: any[]) => void) => {
     const validChannels = [
@@ -247,6 +300,8 @@ contextBridge.exposeInMainWorld('electron', {
       'open-ai-panel',
       'add-bookmark',
       'show-bookmarks',
+      'menu:action',
+      'fullscreen-change',
     ];
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => callback(...args));

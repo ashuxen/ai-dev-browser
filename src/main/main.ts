@@ -5,11 +5,19 @@ import {
   Menu,
   nativeTheme,
   BrowserView,
+  session,
+  dialog,
+  shell,
+  Notification,
 } from 'electron';
 import path from 'path';
+import fs from 'fs';
 import { BookmarkManager } from './bookmark-manager';
 import { HistoryManager } from './history-manager';
 import { AIService } from './ai-service';
+import { securityManager } from './security-manager';
+import { torManager } from './tor-manager';
+import { ssoManager } from './sso-manager';
 
 console.log('🚀 FlashAppAI Browser starting...');
 
@@ -35,6 +43,26 @@ interface Tab {
   view: BrowserView;
 }
 
+// Recently closed tab interface
+interface ClosedTab {
+  id: string;
+  url: string;
+  title: string;
+  closedAt: number;
+}
+
+// Download interface
+interface Download {
+  id: string;
+  url: string;
+  filename: string;
+  path: string;
+  state: 'progressing' | 'completed' | 'cancelled' | 'interrupted';
+  receivedBytes: number;
+  totalBytes: number;
+  startTime: number;
+}
+
 class FlashAppAIBrowser {
   private mainWindow: BrowserWindow | null = null;
   private phantomWindows: Set<BrowserWindow> = new Set();  // Phantom Mode windows
@@ -46,7 +74,19 @@ class FlashAppAIBrowser {
   // AI Panel
   private aiPanelView: BrowserView | null = null;
   private aiPanelOpen = false;
-  private aiPanelWidth = 420;
+  private aiPanelWidth = 400;
+  
+  // Recently Closed Tabs
+  private recentlyClosed: ClosedTab[] = [];
+  private maxRecentlyClosed = 25;
+  
+  // Downloads
+  private downloads: Map<string, Download> = new Map();
+  
+  // Ad & Tracker Blocking
+  private adBlockEnabled = true;
+  private trackerBlockEnabled = true;
+  private blockedDomains: Set<string> = new Set();
   
   // Managers
   private bookmarkManager: BookmarkManager;
@@ -70,9 +110,19 @@ class FlashAppAIBrowser {
 
     app.whenReady().then(() => {
       console.log('✅ App ready');
+      
+      // Initialize security for default session
+      console.log('🔐 Initializing security features...');
+      securityManager.initializeSession(session.defaultSession, false);
+      
+      // Initialize blocking and downloads
+      this.updateBlockingRules();
+      this.setupDownloadManager();
+      
       this.createWindow();
       this.setupIPC();
       this.setupMenu();
+      this.setupSecurityIPC();
     });
 
     app.on('window-all-closed', () => {
@@ -109,19 +159,28 @@ class FlashAppAIBrowser {
 
     // Load the browser UI HTML file
     const isDev = !app.isPackaged;
+    console.log('📦 isDev:', isDev, 'cwd:', process.cwd(), 'appPath:', app.getAppPath());
+    
+    // Use process.cwd() for dev mode - it's always the project root when running via npm start
     const uiPath = isDev
-      ? path.join(app.getAppPath(), 'src/renderer/browser-ui.html')
+      ? path.join(process.cwd(), 'src/renderer/browser-ui.html')
       : path.join(process.resourcesPath, 'browser-ui.html');
-    console.log('📦 Loading UI from:', uiPath, '(isDev:', isDev, ')');
+    console.log('📦 Loading UI from:', uiPath);
     
     try {
       await this.mainWindow.loadFile(uiPath);
+      console.log('✅ UI loaded successfully');
     } catch (err) {
       console.error('❌ Failed to load UI:', err);
-      // Fallback: try loading from app path
-      const fallbackPath = path.join(app.getAppPath(), 'src/renderer/browser-ui.html');
-      console.log('📦 Trying fallback:', fallbackPath);
-      await this.mainWindow.loadFile(fallbackPath);
+      // Fallback for production
+      if (!isDev) {
+        try {
+          const fallback = path.join(app.getAppPath(), 'browser-ui.html');
+          await this.mainWindow.loadFile(fallback);
+        } catch (e) {
+          console.error('❌ All fallbacks failed');
+        }
+      }
     }
 
     // Create initial tab after UI loads
@@ -180,6 +239,51 @@ class FlashAppAIBrowser {
       this.notifyTabUpdate();
     });
 
+    // Handle fullscreen mode (for videos, etc.)
+    view.webContents.on('enter-html-full-screen', () => {
+      console.log('🎬 Entering HTML fullscreen');
+      if (this.mainWindow) {
+        // Tell renderer to hide UI immediately
+        this.mainWindow.webContents.send('fullscreen-change', true);
+        
+        // Hide AI panel if open
+        if (this.aiPanelView) {
+          this.mainWindow.removeBrowserView(this.aiPanelView);
+        }
+        
+        // After a brief moment for UI to hide, set BrowserView to fill window
+        setTimeout(() => {
+          if (this.mainWindow) {
+            const bounds = this.mainWindow.getBounds();
+            view.setBounds({
+              x: 0,
+              y: 0,
+              width: bounds.width,
+              height: bounds.height,
+            });
+          }
+        }, 50);
+      }
+    });
+
+    view.webContents.on('leave-html-full-screen', () => {
+      console.log('🎬 Leaving HTML fullscreen');
+      if (this.mainWindow) {
+        // Tell renderer to show UI
+        this.mainWindow.webContents.send('fullscreen-change', false);
+      }
+      
+      // Restore normal bounds
+      setTimeout(() => {
+        this.updateTabBounds();
+        // Restore AI panel if it was open
+        if (this.aiPanelView && this.aiPanelOpen) {
+          this.mainWindow?.addBrowserView(this.aiPanelView);
+          this.updateTabBounds();
+        }
+      }, 50);
+    });
+
     view.webContents.loadURL(url);
     this.switchToTab(id);
 
@@ -221,6 +325,20 @@ class FlashAppAIBrowser {
   private closeTab(tabId: string) {
     const tab = this.tabs.get(tabId);
     if (!tab || !this.mainWindow) return;
+
+    // Save to recently closed before destroying
+    if (tab.url && tab.url !== 'about:blank') {
+      this.recentlyClosed.unshift({
+        id: `closed-${Date.now()}`,
+        url: tab.url,
+        title: tab.title || 'Untitled',
+        closedAt: Date.now(),
+      });
+      // Keep only the most recent ones
+      if (this.recentlyClosed.length > this.maxRecentlyClosed) {
+        this.recentlyClosed = this.recentlyClosed.slice(0, this.maxRecentlyClosed);
+      }
+    }
 
     if (this.activeTabId === tabId) {
       this.mainWindow.removeBrowserView(tab.view);
@@ -353,13 +471,42 @@ class FlashAppAIBrowser {
     console.log('🤖 AI Panel resized to:', this.aiPanelWidth);
   }
 
-  // 👻 Phantom Mode - Private browsing with no traces
-  private createPhantomWindow() {
+  // 👻 Phantom Mode - Private browsing with Tor support
+  private async createPhantomWindow() {
     console.log('👻 Opening Phantom Mode...');
     
     // Create ephemeral session (in-memory only, no persistence)
-    const { session } = require('electron');
     const phantomSession = session.fromPartition(`phantom-${Date.now()}`, { cache: false });
+    
+    // Initialize security with enhanced protection for Phantom Mode
+    securityManager.initializeSession(phantomSession, true);
+    
+    // Inject anti-fingerprinting script
+    phantomSession.webRequest.onCompleted({ urls: ['*://*/*'] }, (details) => {
+      // Inject anti-fingerprinting after page load
+    });
+    
+    // Try to enable Tor
+    let torEnabled = false;
+    const torStatus = torManager.getStatus();
+    
+    if (!torStatus.connected) {
+      // Try to start Tor
+      console.log('🧅 Attempting to start Tor for Phantom Mode...');
+      torEnabled = await torManager.start();
+    } else {
+      torEnabled = true;
+    }
+    
+    if (torEnabled) {
+      // Configure session to use Tor if available
+      await torManager.configureSession(phantomSession);
+      console.log('🧅 Phantom Mode using Tor network');
+    } else {
+      // Use built-in privacy features without Tor
+      console.log('👻 Phantom Mode with built-in privacy features');
+      // Security already initialized above, just log that we're using built-in privacy
+    }
     
     const phantomWindow = new BrowserWindow({
       width: 1200,
@@ -369,7 +516,7 @@ class FlashAppAIBrowser {
       titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
       trafficLightPosition: { x: 15, y: 15 },
       backgroundColor: '#1a0a2e',  // Darker purple for Phantom Mode
-      title: '👻 Phantom Mode - FlashAppAI',
+      title: torEnabled ? '🧅 Phantom Mode (Tor) - FlashAppAI' : '👻 Phantom Mode - FlashAppAI',
       webPreferences: {
         preload: path.join(__dirname, 'preload.js'),
         nodeIntegration: false,
@@ -379,13 +526,21 @@ class FlashAppAIBrowser {
       },
     });
 
+    // Block popups in Phantom Mode
+    phantomWindow.webContents.setWindowOpenHandler(({ url }) => {
+      if (securityManager.shouldBlockPopup(phantomWindow.webContents.getURL(), url)) {
+        return { action: 'deny' };
+      }
+      return { action: 'allow' };
+    });
+
     // Load phantom mode UI
     const phantomIsDev = !app.isPackaged;
     const phantomUIPath = phantomIsDev
-      ? path.join(app.getAppPath(), 'src/renderer/phantom-mode.html')
+      ? path.join(process.cwd(), 'src/renderer/phantom-mode.html')
       : path.join(process.resourcesPath, 'phantom-mode.html');
     phantomWindow.loadFile(phantomUIPath).catch(() => {
-      // Fallback if phantom-mode.html doesn't exist yet
+      // Fallback for production
       phantomWindow.loadURL('https://duckduckgo.com');
     });
 
@@ -404,7 +559,7 @@ class FlashAppAIBrowser {
       phantomSession.clearAuthCache();
     });
 
-    console.log('👻 Phantom Mode window created');
+    console.log('👻 Phantom Mode window created', torEnabled ? '(with Tor)' : '(without Tor)');
     return phantomWindow;
   }
 
@@ -425,6 +580,125 @@ class FlashAppAIBrowser {
       tabs: tabsData,
       activeTabId: this.activeTabId,
     });
+  }
+
+  // ===== AD & TRACKER BLOCKING =====
+  private adBlockList = new Set([
+    // Ad networks
+    'doubleclick.net', 'googlesyndication.com', 'googleadservices.com',
+    'facebook.com/tr', 'facebook.net/tr', 'adservice.google.com',
+    'pagead2.googlesyndication.com', 'securepubads.g.doubleclick.net',
+    'ads.yahoo.com', 'advertising.com', 'adsrvr.org', 'adnxs.com',
+    'criteo.com', 'criteo.net', 'outbrain.com', 'taboola.com',
+    'amazon-adsystem.com', 'moatads.com', 'rubiconproject.com',
+    'pubmatic.com', 'openx.net', 'casalemedia.com', 'spotxchange.com',
+    'advertising.amazon.com', 'media.net', 'revcontent.com',
+  ]);
+
+  private trackerBlockList = new Set([
+    // Trackers
+    'google-analytics.com', 'analytics.google.com', 'googletagmanager.com',
+    'facebook.com/plugins', 'connect.facebook.net', 'pixel.facebook.com',
+    'hotjar.com', 'mixpanel.com', 'segment.io', 'segment.com',
+    'amplitude.com', 'fullstory.com', 'mouseflow.com', 'clarity.ms',
+    'crazyegg.com', 'optimizely.com', 'omtrdc.net', 'demdex.net',
+    'bluekai.com', 'krxd.net', 'exelator.com', 'quantserve.com',
+    'scorecardresearch.com', 'chartbeat.com', 'newrelic.com',
+    'bugsnag.com', 'sentry.io', 'logrocket.com',
+  ]);
+
+  private updateBlockingRules() {
+    const ses = session.defaultSession;
+    
+    // Remove existing filter
+    ses.webRequest.onBeforeRequest({ urls: ['*://*/*'] }, (details, callback) => {
+      const url = new URL(details.url);
+      const hostname = url.hostname;
+      
+      let shouldBlock = false;
+      
+      // Check ad blocking
+      if (this.adBlockEnabled) {
+        for (const adDomain of this.adBlockList) {
+          if (hostname.includes(adDomain) || details.url.includes(adDomain)) {
+            shouldBlock = true;
+            this.blockedDomains.add(hostname);
+            break;
+          }
+        }
+      }
+      
+      // Check tracker blocking
+      if (!shouldBlock && this.trackerBlockEnabled) {
+        for (const trackerDomain of this.trackerBlockList) {
+          if (hostname.includes(trackerDomain) || details.url.includes(trackerDomain)) {
+            shouldBlock = true;
+            this.blockedDomains.add(hostname);
+            break;
+          }
+        }
+      }
+      
+      if (shouldBlock) {
+        console.log('🛡️ Blocked:', hostname);
+        callback({ cancel: true });
+      } else {
+        callback({});
+      }
+    });
+    
+    console.log('🛡️ Blocking rules updated - Ads:', this.adBlockEnabled, 'Trackers:', this.trackerBlockEnabled);
+  }
+
+  private setupDownloadManager() {
+    const ses = session.defaultSession;
+    
+    ses.on('will-download', (_event, item) => {
+      const downloadId = `dl-${Date.now()}`;
+      const filename = item.getFilename();
+      const savePath = path.join(app.getPath('downloads'), filename);
+      
+      item.setSavePath(savePath);
+      
+      const download: Download = {
+        id: downloadId,
+        url: item.getURL(),
+        filename,
+        path: savePath,
+        state: 'progressing',
+        receivedBytes: 0,
+        totalBytes: item.getTotalBytes(),
+        startTime: Date.now(),
+      };
+      
+      this.downloads.set(downloadId, download);
+      
+      item.on('updated', (_e, state) => {
+        download.receivedBytes = item.getReceivedBytes();
+        download.totalBytes = item.getTotalBytes();
+        download.state = state === 'progressing' ? 'progressing' : 'interrupted';
+        
+        // Notify renderer of progress
+        this.mainWindow?.webContents.send('download:progress', download);
+      });
+      
+      item.on('done', (_e, state) => {
+        download.state = state === 'completed' ? 'completed' : 'cancelled';
+        download.receivedBytes = item.getReceivedBytes();
+        
+        // Notify renderer
+        this.mainWindow?.webContents.send('download:complete', download);
+        
+        if (state === 'completed') {
+          new Notification({
+            title: 'Download Complete',
+            body: filename,
+          }).show();
+        }
+      });
+    });
+    
+    console.log('📥 Download manager initialized');
   }
 
   private setupIPC() {
@@ -752,13 +1026,532 @@ class FlashAppAIBrowser {
     ipcMain.handle('app:platform', () => process.platform);
     ipcMain.handle('app:is-dark-mode', () => nativeTheme.shouldUseDarkColors);
 
+    // ===== FIND IN PAGE =====
+    ipcMain.handle('find:start', (_e, text: string, options?: { forward?: boolean; findNext?: boolean; matchCase?: boolean }) => {
+      const tab = this.tabs.get(this.activeTabId!);
+      if (tab) {
+        tab.view.webContents.findInPage(text, {
+          forward: options?.forward ?? true,
+          findNext: options?.findNext ?? false,
+          matchCase: options?.matchCase ?? false,
+        });
+        return { success: true };
+      }
+      return { success: false };
+    });
+
+    ipcMain.handle('find:next', (_e, text: string) => {
+      const tab = this.tabs.get(this.activeTabId!);
+      if (tab) {
+        tab.view.webContents.findInPage(text, { forward: true, findNext: true });
+        return { success: true };
+      }
+      return { success: false };
+    });
+
+    ipcMain.handle('find:previous', (_e, text: string) => {
+      const tab = this.tabs.get(this.activeTabId!);
+      if (tab) {
+        tab.view.webContents.findInPage(text, { forward: false, findNext: true });
+        return { success: true };
+      }
+      return { success: false };
+    });
+
+    ipcMain.handle('find:stop', () => {
+      const tab = this.tabs.get(this.activeTabId!);
+      if (tab) {
+        tab.view.webContents.stopFindInPage('clearSelection');
+        return { success: true };
+      }
+      return { success: false };
+    });
+
+    // Listen for find results
+    this.tabs.forEach((tab) => {
+      tab.view.webContents.on('found-in-page', (_event, result) => {
+        this.mainWindow?.webContents.send('find:result', result);
+      });
+    });
+
+    // ===== RECENTLY CLOSED TABS =====
+    ipcMain.handle('tabs:get-recently-closed', () => {
+      return this.recentlyClosed;
+    });
+
+    ipcMain.handle('tabs:restore-closed', (_e, id: string) => {
+      const closedTab = this.recentlyClosed.find(t => t.id === id);
+      if (closedTab) {
+        this.recentlyClosed = this.recentlyClosed.filter(t => t.id !== id);
+        this.createTab(closedTab.url);
+        return { success: true };
+      }
+      return { success: false };
+    });
+
+    ipcMain.handle('tabs:clear-recently-closed', () => {
+      this.recentlyClosed = [];
+      return { success: true };
+    });
+
+    // ===== DEVELOPER TOOLS =====
+    ipcMain.handle('devtools:toggle', () => {
+      const tab = this.tabs.get(this.activeTabId!);
+      if (tab) {
+        if (tab.view.webContents.isDevToolsOpened()) {
+          tab.view.webContents.closeDevTools();
+        } else {
+          tab.view.webContents.openDevTools({ mode: 'right' });
+        }
+        return { success: true, isOpen: tab.view.webContents.isDevToolsOpened() };
+      }
+      return { success: false };
+    });
+
+    ipcMain.handle('devtools:open', () => {
+      const tab = this.tabs.get(this.activeTabId!);
+      if (tab) {
+        tab.view.webContents.openDevTools({ mode: 'right' });
+        return { success: true };
+      }
+      return { success: false };
+    });
+
+    ipcMain.handle('devtools:close', () => {
+      const tab = this.tabs.get(this.activeTabId!);
+      if (tab) {
+        tab.view.webContents.closeDevTools();
+        return { success: true };
+      }
+      return { success: false };
+    });
+
+    // ===== SCREENSHOT =====
+    ipcMain.handle('screenshot:capture', async (_e, options?: { fullPage?: boolean }) => {
+      const tab = this.tabs.get(this.activeTabId!);
+      if (!tab) return { success: false };
+
+      try {
+        const image = await tab.view.webContents.capturePage();
+        const pageTitle = tab.view.webContents.getTitle() || 'screenshot';
+        const sanitizedTitle = pageTitle.replace(/[^a-z0-9]/gi, '_').substring(0, 50);
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        
+        const { filePath } = await dialog.showSaveDialog(this.mainWindow!, {
+          title: 'Save Screenshot',
+          defaultPath: `${sanitizedTitle}_${timestamp}.png`,
+          filters: [{ name: 'PNG Images', extensions: ['png'] }],
+        });
+
+        if (filePath) {
+          fs.writeFileSync(filePath, image.toPNG());
+          new Notification({
+            title: 'Screenshot Saved',
+            body: `Saved to ${filePath}`,
+          }).show();
+          shell.showItemInFolder(filePath);
+          return { success: true, path: filePath };
+        }
+        return { success: false, reason: 'cancelled' };
+      } catch (error) {
+        console.error('Screenshot failed:', error);
+        return { success: false, reason: (error as Error).message };
+      }
+    });
+
+    // ===== AD & TRACKER BLOCKING =====
+    ipcMain.handle('blocking:get-status', () => {
+      return {
+        adBlockEnabled: this.adBlockEnabled,
+        trackerBlockEnabled: this.trackerBlockEnabled,
+        blockedCount: this.blockedDomains.size,
+      };
+    });
+
+    ipcMain.handle('blocking:set-ad-block', (_e, enabled: boolean) => {
+      this.adBlockEnabled = enabled;
+      this.updateBlockingRules();
+      return { success: true };
+    });
+
+    ipcMain.handle('blocking:set-tracker-block', (_e, enabled: boolean) => {
+      this.trackerBlockEnabled = enabled;
+      this.updateBlockingRules();
+      return { success: true };
+    });
+
+    // ===== DOWNLOAD MANAGER =====
+    ipcMain.handle('downloads:get-all', () => {
+      return Array.from(this.downloads.values());
+    });
+
+    ipcMain.handle('downloads:clear', () => {
+      const completed = Array.from(this.downloads.entries())
+        .filter(([_, d]) => d.state === 'completed' || d.state === 'cancelled');
+      completed.forEach(([id]) => this.downloads.delete(id));
+      return { success: true };
+    });
+
     // 👻 Phantom Mode
     ipcMain.handle('phantom:open', () => {
       this.createPhantomWindow();
       return { success: true };
     });
 
+    // Hide/Show BrowserViews (for modals)
+    ipcMain.handle('views:hide', () => {
+      if (!this.mainWindow) return;
+      
+      // Hide all tab BrowserViews
+      this.tabs.forEach((tab) => {
+        this.mainWindow?.removeBrowserView(tab.view);
+      });
+      
+      // Hide AI panel BrowserView
+      if (this.aiPanelView) {
+        this.mainWindow.removeBrowserView(this.aiPanelView);
+      }
+      
+      console.log('🔲 BrowserViews hidden for modal');
+      return { success: true };
+    });
+
+    ipcMain.handle('views:show', () => {
+      if (!this.mainWindow) return;
+      
+      // Re-add the active tab's BrowserView
+      const activeTab = this.tabs.get(this.activeTabId!);
+      if (activeTab) {
+        this.mainWindow.addBrowserView(activeTab.view);
+        this.updateTabBounds();
+      }
+      
+      // Re-add AI panel if it was open
+      if (this.aiPanelView && this.aiPanelOpen) {
+        this.mainWindow.addBrowserView(this.aiPanelView);
+        this.updateTabBounds();
+      }
+      
+      console.log('🔲 BrowserViews restored');
+      return { success: true };
+    });
+
+    // Native Menu (works above BrowserViews)
+    ipcMain.handle('menu:show', (_e, menuType: string) => {
+      if (!this.mainWindow) return;
+      
+      const menuTemplate: Electron.MenuItemConstructorOptions[] = [];
+      
+      if (menuType === 'main') {
+        menuTemplate.push(
+          {
+            label: '⚙️ Settings',
+            click: () => this.mainWindow?.webContents.send('menu:action', 'settings'),
+          },
+          {
+            label: '❓ Help',
+            click: () => this.mainWindow?.webContents.send('menu:action', 'help'),
+          },
+          {
+            label: 'ℹ️ About',
+            click: () => this.mainWindow?.webContents.send('menu:action', 'about'),
+          },
+          { type: 'separator' },
+          {
+            label: '📥 Downloads',
+            click: () => {
+              // Open system downloads folder
+              const downloadsPath = app.getPath('downloads');
+              shell.openPath(downloadsPath);
+            },
+          },
+          { type: 'separator' },
+          {
+            label: '🔍 Zoom In',
+            accelerator: 'CmdOrCtrl+Plus',
+            click: () => {
+              const tab = this.tabs.get(this.activeTabId!);
+              if (tab) {
+                const currentZoom = tab.view.webContents.getZoomFactor();
+                tab.view.webContents.setZoomFactor(Math.min(currentZoom + 0.1, 3));
+              }
+            },
+          },
+          {
+            label: '🔍 Zoom Out',
+            accelerator: 'CmdOrCtrl+Minus',
+            click: () => {
+              const tab = this.tabs.get(this.activeTabId!);
+              if (tab) {
+                const currentZoom = tab.view.webContents.getZoomFactor();
+                tab.view.webContents.setZoomFactor(Math.max(currentZoom - 0.1, 0.25));
+              }
+            },
+          },
+          {
+            label: '🔍 Reset Zoom',
+            accelerator: 'CmdOrCtrl+0',
+            click: () => {
+              const tab = this.tabs.get(this.activeTabId!);
+              if (tab) {
+                tab.view.webContents.setZoomFactor(1);
+              }
+            },
+          },
+          { type: 'separator' },
+          {
+            label: '🖨️ Print',
+            accelerator: 'CmdOrCtrl+P',
+            click: () => {
+              const tab = this.tabs.get(this.activeTabId!);
+              if (tab) {
+                tab.view.webContents.print({}, (success, errorType) => {
+                  if (!success) {
+                    console.log('Print failed:', errorType);
+                  }
+                });
+              }
+            },
+          },
+          {
+            label: '📄 Save as PDF',
+            accelerator: 'CmdOrCtrl+Shift+P',
+            click: async () => {
+              const tab = this.tabs.get(this.activeTabId!);
+              if (tab) {
+                const pageTitle = tab.view.webContents.getTitle() || 'page';
+                const sanitizedTitle = pageTitle.replace(/[^a-z0-9]/gi, '_').substring(0, 50);
+                
+                const { filePath } = await dialog.showSaveDialog(this.mainWindow!, {
+                  title: 'Save as PDF',
+                  defaultPath: `${sanitizedTitle}.pdf`,
+                  filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
+                });
+                
+                if (filePath) {
+                  try {
+                    const pdfData = await tab.view.webContents.printToPDF({
+                      printBackground: true,
+                      landscape: false,
+                      pageSize: 'A4',
+                    });
+                    
+                    fs.writeFileSync(filePath, pdfData);
+                    
+                    // Show success notification
+                    new Notification({
+                      title: 'PDF Saved',
+                      body: `Saved to ${filePath}`,
+                    }).show();
+                    
+                    // Open the saved PDF
+                    shell.openPath(filePath);
+                  } catch (error) {
+                    console.error('Failed to save PDF:', error);
+                  }
+                }
+              }
+            },
+          },
+          { type: 'separator' },
+          {
+            label: '🔄 Reload',
+            accelerator: 'CmdOrCtrl+R',
+            click: () => {
+              const tab = this.tabs.get(this.activeTabId!);
+              if (tab) {
+                tab.view.webContents.reload();
+              }
+            },
+          },
+          {
+            label: '🔍 Find in Page',
+            accelerator: 'CmdOrCtrl+F',
+            click: () => {
+              this.mainWindow?.webContents.send('menu:action', 'find');
+            },
+          },
+          {
+            label: '📋 Recently Closed Tabs',
+            accelerator: 'CmdOrCtrl+Shift+T',
+            click: () => {
+              this.mainWindow?.webContents.send('menu:action', 'recently-closed');
+            },
+          },
+          { type: 'separator' },
+          {
+            label: '📸 Take Screenshot',
+            accelerator: 'CmdOrCtrl+Shift+S',
+            click: async () => {
+              const tab = this.tabs.get(this.activeTabId!);
+              if (!tab) return;
+              
+              try {
+                const image = await tab.view.webContents.capturePage();
+                const pageTitle = tab.view.webContents.getTitle() || 'screenshot';
+                const sanitizedTitle = pageTitle.replace(/[^a-z0-9]/gi, '_').substring(0, 50);
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                
+                const { filePath } = await dialog.showSaveDialog(this.mainWindow!, {
+                  title: 'Save Screenshot',
+                  defaultPath: `${sanitizedTitle}_${timestamp}.png`,
+                  filters: [{ name: 'PNG Images', extensions: ['png'] }],
+                });
+
+                if (filePath) {
+                  fs.writeFileSync(filePath, image.toPNG());
+                  new Notification({
+                    title: 'Screenshot Saved',
+                    body: `Saved to ${filePath}`,
+                  }).show();
+                  shell.showItemInFolder(filePath);
+                }
+              } catch (error) {
+                console.error('Screenshot failed:', error);
+              }
+            },
+          },
+          {
+            label: '🛠️ Developer Tools',
+            accelerator: 'CmdOrCtrl+Shift+I',
+            click: () => {
+              const tab = this.tabs.get(this.activeTabId!);
+              if (tab) {
+                if (tab.view.webContents.isDevToolsOpened()) {
+                  tab.view.webContents.closeDevTools();
+                } else {
+                  tab.view.webContents.openDevTools({ mode: 'right' });
+                }
+              }
+            },
+          },
+          { type: 'separator' },
+          {
+            label: '🛡️ Ad Blocker',
+            type: 'checkbox',
+            checked: this.adBlockEnabled,
+            click: () => {
+              this.adBlockEnabled = !this.adBlockEnabled;
+              this.updateBlockingRules();
+              this.mainWindow?.webContents.send('menu:action', 
+                this.adBlockEnabled ? 'ad-block-enabled' : 'ad-block-disabled');
+            },
+          },
+          {
+            label: '🔒 Tracker Blocker',
+            type: 'checkbox',
+            checked: this.trackerBlockEnabled,
+            click: () => {
+              this.trackerBlockEnabled = !this.trackerBlockEnabled;
+              this.updateBlockingRules();
+              this.mainWindow?.webContents.send('menu:action', 
+                this.trackerBlockEnabled ? 'tracker-block-enabled' : 'tracker-block-disabled');
+            },
+          },
+          { type: 'separator' },
+          {
+            label: '🧹 Clear Browsing Data',
+            click: () => {
+              session.defaultSession.clearStorageData();
+              this.mainWindow?.webContents.send('menu:action', 'data-cleared');
+            },
+          },
+        );
+      }
+      
+      const menu = Menu.buildFromTemplate(menuTemplate);
+      menu.popup({ window: this.mainWindow });
+      
+      return { success: true };
+    });
+
     console.log('✅ IPC handlers registered');
+  }
+
+  private setupSecurityIPC() {
+    console.log('🔐 Setting up security IPC handlers...');
+
+    // Security settings
+    ipcMain.handle('security:get-settings', () => {
+      return securityManager.getSettings();
+    });
+
+    ipcMain.handle('security:update-settings', (_e, settings: any) => {
+      securityManager.updateSettings(settings);
+      return { success: true };
+    });
+
+    ipcMain.handle('security:add-trusted-domain', (_e, domain: string) => {
+      securityManager.addTrustedDomain(domain);
+      return { success: true };
+    });
+
+    ipcMain.handle('security:remove-trusted-domain', (_e, domain: string) => {
+      securityManager.removeTrustedDomain(domain);
+      return { success: true };
+    });
+
+    ipcMain.handle('security:get-blocked-popups', (_e, url: string) => {
+      return securityManager.getBlockedPopupCount(url);
+    });
+
+    ipcMain.handle('security:clear-data', () => {
+      securityManager.clearSecurityData();
+      return { success: true };
+    });
+
+    // Tor integration
+    ipcMain.handle('tor:status', () => {
+      return torManager.getStatus();
+    });
+
+    ipcMain.handle('tor:start', async () => {
+      const success = await torManager.start();
+      return { success, status: torManager.getStatus() };
+    });
+
+    ipcMain.handle('tor:stop', () => {
+      torManager.stop();
+      return { success: true };
+    });
+
+    ipcMain.handle('tor:new-circuit', async () => {
+      const success = await torManager.newCircuit();
+      return { success };
+    });
+
+    ipcMain.handle('tor:get-install-instructions', () => {
+      return torManager.getInstallInstructions();
+    });
+
+    // SSO/OAuth
+    ipcMain.handle('sso:get-providers', () => {
+      return ssoManager.getProviders();
+    });
+
+    ipcMain.handle('sso:configure-provider', (_e, providerId: string, config: any) => {
+      return ssoManager.configureProvider(providerId, config);
+    });
+
+    ipcMain.handle('sso:authenticate', async (_e, providerId: string) => {
+      return await ssoManager.authenticate(providerId);
+    });
+
+    ipcMain.handle('sso:get-session', (_e, providerId: string) => {
+      return ssoManager.getSession(providerId);
+    });
+
+    ipcMain.handle('sso:logout', (_e, providerId: string) => {
+      ssoManager.logout(providerId);
+      return { success: true };
+    });
+
+    ipcMain.handle('sso:logout-all', () => {
+      ssoManager.logoutAll();
+      return { success: true };
+    });
+
+    console.log('✅ Security IPC handlers registered');
   }
 
   private setupMenu() {
