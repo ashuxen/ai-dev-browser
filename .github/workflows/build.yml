@@ -54,8 +54,19 @@ jobs:
       - name: Package for Windows
         run: npm run package
 
+      - name: List output folder
+        run: dir out
+        shell: pwsh
+
       - name: Create ZIP
-        run: Compress-Archive -Path "out/AI Dev Browser-win32-x64" -DestinationPath "out/FlashAppAI-Browser-win32-x64.zip"
+        run: |
+          $folder = Get-ChildItem -Path "out" -Directory | Where-Object { $_.Name -like "*win32-x64*" } | Select-Object -First 1
+          if ($folder) {
+            Compress-Archive -Path $folder.FullName -DestinationPath "out/FlashAppAI-Browser-win32-x64.zip"
+          } else {
+            Write-Error "No win32-x64 folder found"
+            exit 1
+          }
         shell: pwsh
 
       - name: Upload Windows artifacts
@@ -82,10 +93,19 @@ jobs:
       - name: Package for Linux
         run: npm run package
 
+      - name: List output folder
+        run: ls -la out/
+
       - name: Create ZIP
         run: |
           cd out
-          zip -r FlashAppAI-Browser-linux-x64.zip "AI Dev Browser-linux-x64"
+          FOLDER=$(ls -d *linux-x64* 2>/dev/null | head -1)
+          if [ -n "$FOLDER" ]; then
+            zip -r FlashAppAI-Browser-linux-x64.zip "$FOLDER"
+          else
+            echo "No linux-x64 folder found"
+            exit 1
+          fi
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
