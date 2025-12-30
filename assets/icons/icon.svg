@@ -1,53 +1,86 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6366f1"/>
-      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    <!-- FlashAppAI Brand Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a1a"/>
+      <stop offset="100%" style="stop-color:#0f0f23"/>
     </linearGradient>
-    <linearGradient id="glowGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#a5b4fc"/>
-      <stop offset="100%" style="stop-color:#c4b5fd"/>
+    <linearGradient id="boltGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d9ff"/>
+      <stop offset="50%" style="stop-color:#a855f7"/>
+      <stop offset="100%" style="stop-color:#ec4899"/>
     </linearGradient>
+    <linearGradient id="glowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d9ff;stop-opacity:0.6"/>
+      <stop offset="100%" style="stop-color:#a855f7;stop-opacity:0.6"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="innerGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
   
-  <!-- Background circle -->
-  <circle cx="256" cy="256" r="240" fill="url(#bgGradient)"/>
+  <!-- Background Circle with Dark Theme -->
+  <circle cx="256" cy="256" r="250" fill="url(#bgGrad)"/>
   
-  <!-- Outer ring glow -->
-  <circle cx="256" cy="256" r="220" fill="none" stroke="url(#glowGradient)" stroke-width="4" opacity="0.5"/>
+  <!-- Outer Glow Ring -->
+  <circle cx="256" cy="256" r="240" fill="none" stroke="url(#glowGrad)" stroke-width="3" opacity="0.8"/>
+  <circle cx="256" cy="256" r="230" fill="none" stroke="url(#boltGrad)" stroke-width="1" opacity="0.4"/>
   
-  <!-- Browser window shape -->
-  <rect x="96" y="128" width="320" height="256" rx="20" fill="#1a1a2e"/>
+  <!-- Lightning Bolt - FlashAppAI Icon -->
+  <g filter="url(#glow)">
+    <!-- Main Bolt Shape -->
+    <path d="M290 80 L160 260 L230 260 L190 432 L360 220 L280 220 L330 80 Z" 
+          fill="url(#boltGrad)" 
+          stroke="white" 
+          stroke-width="2"
+          stroke-linejoin="round"/>
+  </g>
   
-  <!-- Tab bar -->
-  <rect x="96" y="128" width="320" height="40" rx="20" fill="#252538"/>
-  <rect x="96" y="148" width="320" height="20" fill="#252538"/>
+  <!-- Inner Highlight on Bolt -->
+  <path d="M280 110 L180 250 L235 250 L205 390 L330 230 L275 230 L310 110 Z" 
+        fill="none" 
+        stroke="white" 
+        stroke-width="1.5" 
+        stroke-opacity="0.3"
+        stroke-linejoin="round"/>
   
-  <!-- Tab buttons -->
-  <circle cx="124" cy="148" r="8" fill="#ef4444"/>
-  <circle cx="148" cy="148" r="8" fill="#eab308"/>
-  <circle cx="172" cy="148" r="8" fill="#22c55e"/>
+  <!-- Sparkle Effects -->
+  <g fill="#00d9ff" filter="url(#innerGlow)">
+    <!-- Top sparkles -->
+    <circle cx="340" cy="120" r="6" opacity="0.9"/>
+    <circle cx="370" cy="150" r="4" opacity="0.7"/>
+    <circle cx="130" cy="180" r="5" opacity="0.8"/>
+    
+    <!-- Bottom sparkles -->
+    <circle cx="140" cy="360" r="5" opacity="0.7"/>
+    <circle cx="380" cy="320" r="4" opacity="0.6"/>
+    <circle cx="400" cy="280" r="3" opacity="0.5"/>
+  </g>
   
-  <!-- URL bar -->
-  <rect x="200" y="140" width="180" height="16" rx="8" fill="#0f0f1a"/>
+  <!-- AI Dots Pattern -->
+  <g fill="#a855f7" opacity="0.6">
+    <circle cx="100" cy="256" r="4"/>
+    <circle cx="412" cy="256" r="4"/>
+    <circle cx="256" cy="100" r="4"/>
+    <circle cx="256" cy="412" r="4"/>
+  </g>
   
-  <!-- Code brackets -->
-  <path d="M180 280 L140 320 L180 360" stroke="#a5b4fc" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <path d="M332 280 L372 320 L332 360" stroke="#a5b4fc" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  
-  <!-- AI brain circle -->
-  <circle cx="256" cy="320" r="40" fill="#6366f1"/>
-  <circle cx="256" cy="320" r="30" fill="#818cf8"/>
-  
-  <!-- AI neural dots -->
-  <circle cx="240" cy="310" r="6" fill="white"/>
-  <circle cx="272" cy="310" r="6" fill="white"/>
-  <circle cx="256" cy="335" r="8" fill="white"/>
-  
-  <!-- Connection lines -->
-  <line x1="240" y1="310" x2="256" y2="335" stroke="white" stroke-width="2"/>
-  <line x1="272" y1="310" x2="256" y2="335" stroke="white" stroke-width="2"/>
-  <line x1="240" y1="310" x2="272" y2="310" stroke="white" stroke-width="2"/>
+  <!-- Connecting Lines (Neural Network Effect) -->
+  <g stroke="#00d9ff" stroke-width="1" opacity="0.3">
+    <line x1="100" y1="256" x2="160" y2="260"/>
+    <line x1="360" y1="220" x2="412" y2="256"/>
+    <line x1="256" y1="100" x2="290" y2="80"/>
+    <line x1="190" y1="432" x2="256" y2="412"/>
+  </g>
 </svg>
-
-

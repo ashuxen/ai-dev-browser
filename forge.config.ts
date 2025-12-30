@@ -6,8 +6,8 @@ import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-nati
 
 const config: ForgeConfig = {
   packagerConfig: {
-    name: 'AI Dev Browser',
-    executableName: 'ai-dev-browser',
+    name: 'FlashAppAI Browser',
+    executableName: 'flashappai-browser',
     asar: {
       unpack: '**/{*.node,node_modules/electron-store/**/*,node_modules/conf/**/*,node_modules/atomically/**/*}'
     },
@@ -16,7 +16,7 @@ const config: ForgeConfig = {
       './src/renderer/browser-ui.html',
       './src/renderer/phantom-mode.html',
     ],
-    appBundleId: 'com.flashappai.aidevbrowser',
+    appBundleId: 'com.flashappai.browser',
     appCategoryType: 'public.app-category.developer-tools',
     osxSign: {
       identity: process.env.APPLE_IDENTITY || undefined,
