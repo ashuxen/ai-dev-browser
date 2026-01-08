@@ -54,7 +54,7 @@ const config: ForgeConfig = {
         genericName: 'Web Browser',
         description: 'AI-powered browser for developers with built-in privacy features',
         categories: ['Network', 'WebBrowser', 'Development'],
-        icon: './assets/icons/icon.png',
+        icon: './assets/icons/icon_256x256.png',
         maintainer: 'FlashAppAI <support@flashappai.org>',
         homepage: 'https://flashappai.org',
       },
