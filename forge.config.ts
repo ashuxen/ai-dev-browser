@@ -1,13 +1,15 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDMG } from '@electron-forge/maker-dmg';
+import { MakerSquirrel } from '@electron-forge/maker-squirrel';
+import { MakerDeb } from '@electron-forge/maker-deb';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
 
 const config: ForgeConfig = {
   packagerConfig: {
     name: 'FlashAppAI Browser',
-    executableName: 'flashappai-browser',
+    executableName: 'FlashAppAI-Browser',
     asar: {
       unpack: '**/{*.node,node_modules/electron-store/**/*,node_modules/conf/**/*,node_modules/atomically/**/*}'
     },
@@ -37,6 +39,26 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [
+    // Windows Squirrel installer (.exe setup)
+    new MakerSquirrel({
+      name: 'FlashAppAI-Browser',
+      setupExe: 'FlashAppAI-Browser-Setup.exe',
+      setupIcon: './assets/icons/icon.ico',
+      iconUrl: 'https://raw.githubusercontent.com/AshXen/ai-dev-browser/main/assets/icons/icon.ico',
+    }),
+    // Linux Debian package (.deb)
+    new MakerDeb({
+      options: {
+        name: 'flashappai-browser',
+        productName: 'FlashAppAI Browser',
+        genericName: 'Web Browser',
+        description: 'AI-powered browser for developers with built-in privacy features',
+        categories: ['Network', 'WebBrowser', 'Development'],
+        icon: './assets/icons/icon.png',
+        maintainer: 'FlashAppAI <support@flashappai.org>',
+        homepage: 'https://flashappai.org',
+      },
+    }),
     // ZIP for all platforms (simple, always works)
     new MakerZIP({}),
     // macOS DMG

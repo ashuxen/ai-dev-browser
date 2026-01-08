@@ -51,29 +51,22 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Package for Windows
-        run: npm run package
+      - name: Build for Windows (creates installer)
+        run: npm run make
 
       - name: List output folder
-        run: dir out
-        shell: pwsh
-
-      - name: Create ZIP
         run: |
-          $folder = Get-ChildItem -Path "out" -Directory | Where-Object { $_.Name -like "*win32-x64*" } | Select-Object -First 1
-          if ($folder) {
-            Compress-Archive -Path $folder.FullName -DestinationPath "out/FlashAppAI-Browser-win32-x64.zip"
-          } else {
-            Write-Error "No win32-x64 folder found"
-            exit 1
-          }
+          echo "=== Output folder structure ==="
+          Get-ChildItem -Path "out" -Recurse | Select-Object FullName
         shell: pwsh
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-x64
-          path: out/*.zip
+          path: |
+            out/make/squirrel.windows/**/*.exe
+            out/make/zip/**/*.zip
 
   build-linux:
     runs-on: ubuntu-latest
@@ -90,28 +83,21 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Package for Linux
-        run: npm run package
+      - name: Build for Linux
+        run: npm run make
 
       - name: List output folder
-        run: ls -la out/
-
-      - name: Create ZIP
         run: |
-          cd out
-          FOLDER=$(ls -d *linux-x64* 2>/dev/null | head -1)
-          if [ -n "$FOLDER" ]; then
-            zip -r FlashAppAI-Browser-linux-x64.zip "$FOLDER"
-          else
-            echo "No linux-x64 folder found"
-            exit 1
-          fi
+          echo "=== Output folder structure ==="
+          find out -type f | head -50
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-x64
-          path: out/*.zip
+          path: |
+            out/make/deb/**/*.deb
+            out/make/zip/**/*.zip
 
   release:
     needs: [build-macos, build-windows, build-linux]
@@ -136,7 +122,7 @@ jobs:
       - name: Flatten artifacts for release
         run: |
           mkdir -p release-files
-          find artifacts -type f \( -name "*.zip" -o -name "*.dmg" \) -exec cp {} release-files/ \;
+          find artifacts -type f \( -name "*.zip" -o -name "*.dmg" -o -name "*.exe" -o -name "*.deb" \) -exec cp {} release-files/ \;
           echo "=== Files to release ==="
           ls -la release-files/
 
