@@ -83,18 +83,30 @@ jobs:
       - name: Install system dependencies for .deb packaging
         run: |
           sudo apt-get update
-          sudo apt-get install -y dpkg fakeroot
+          sudo apt-get install -y dpkg fakeroot rpm
 
       - name: Install dependencies
         run: npm install
 
       - name: Build for Linux
         run: npm run make
+        continue-on-error: true
+
+      - name: Fallback - Package without installers
+        if: failure()
+        run: |
+          npm run package
+          cd out
+          FOLDER=$(ls -d *linux-x64* 2>/dev/null | head -1)
+          if [ -n "$FOLDER" ]; then
+            tar -czvf FlashAppAI-Browser-linux-x64.tar.gz "$FOLDER"
+          fi
 
       - name: List output folder
         run: |
           echo "=== Output folder structure ==="
-          find out -type f | head -50
+          find out -type f \( -name "*.deb" -o -name "*.zip" -o -name "*.tar.gz" \) 2>/dev/null || echo "No packages found"
+          ls -laR out/ || true
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
@@ -103,6 +115,8 @@ jobs:
           path: |
             out/make/deb/**/*.deb
             out/make/zip/**/*.zip
+            out/*.tar.gz
+          if-no-files-found: warn
 
   release:
     needs: [build-macos, build-windows, build-linux]
@@ -127,7 +141,7 @@ jobs:
       - name: Flatten artifacts for release
         run: |
           mkdir -p release-files
-          find artifacts -type f \( -name "*.zip" -o -name "*.dmg" -o -name "*.exe" -o -name "*.deb" \) -exec cp {} release-files/ \;
+          find artifacts -type f \( -name "*.zip" -o -name "*.dmg" -o -name "*.exe" -o -name "*.deb" -o -name "*.tar.gz" \) -exec cp {} release-files/ \;
           echo "=== Files to release ==="
           ls -la release-files/
 

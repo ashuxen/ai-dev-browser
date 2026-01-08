@@ -39,14 +39,14 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [
-    // Windows Squirrel installer (.exe setup)
+    // Windows Squirrel installer (.exe setup) - only on Windows
     new MakerSquirrel({
       name: 'FlashAppAI-Browser',
       setupExe: 'FlashAppAI-Browser-Setup.exe',
       setupIcon: './assets/icons/icon.ico',
       iconUrl: 'https://raw.githubusercontent.com/AshXen/ai-dev-browser/main/assets/icons/icon.ico',
-    }),
-    // Linux Debian package (.deb)
+    }, ['win32']),
+    // Linux Debian package (.deb) - only on Linux
     new MakerDeb({
       options: {
         name: 'flashappai-browser',
@@ -58,7 +58,7 @@ const config: ForgeConfig = {
         maintainer: 'FlashAppAI <support@flashappai.org>',
         homepage: 'https://flashappai.org',
       },
-    }),
+    }, ['linux']),
     // ZIP for all platforms (simple, always works)
     new MakerZIP({}),
     // macOS DMG
