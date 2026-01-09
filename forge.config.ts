@@ -41,10 +41,11 @@ const config: ForgeConfig = {
   makers: [
     // Windows Squirrel installer (.exe setup) - only on Windows
     new MakerSquirrel({
-      name: 'FlashAppAI-Browser',
+      name: 'FlashAppAIBrowser',
       setupExe: 'FlashAppAI-Browser-Setup.exe',
       setupIcon: './assets/icons/icon.ico',
-      iconUrl: 'https://raw.githubusercontent.com/AshXen/ai-dev-browser/main/assets/icons/icon.ico',
+      // Don't use iconUrl - it can cause issues
+      noMsi: true,
     }, ['win32']),
     // Linux Debian package (.deb) - only on Linux
     new MakerDeb({

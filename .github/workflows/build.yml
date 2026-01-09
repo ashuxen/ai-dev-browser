@@ -52,21 +52,25 @@ jobs:
         run: npm install
 
       - name: Build for Windows (creates installer)
-        run: npm run make
+        run: npm run make -- --platform=win32
 
-      - name: List output folder
+      - name: List all output files
         run: |
-          echo "=== Output folder structure ==="
-          Get-ChildItem -Path "out" -Recurse | Select-Object FullName
+          echo "=== All files in out/make ==="
+          Get-ChildItem -Path "out/make" -Recurse -File | ForEach-Object { $_.FullName }
+          echo "=== Looking for .exe files ==="
+          Get-ChildItem -Path "out" -Recurse -Filter "*.exe" | ForEach-Object { $_.FullName }
         shell: pwsh
 
-      - name: Upload Windows artifacts
+      - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
           name: windows-x64
           path: |
-            out/make/squirrel.windows/**/*.exe
-            out/make/zip/**/*.zip
+            out/make/**/*.exe
+            out/make/**/*.zip
+            out/make/**/*.nupkg
+          if-no-files-found: warn
 
   build-linux:
     runs-on: ubuntu-latest
