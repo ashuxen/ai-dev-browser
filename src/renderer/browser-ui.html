@@ -2594,11 +2594,49 @@
             </div>
             <div class="setting-control">
               <select class="setting-select" id="settingHomePage">
+                <option value="about:blank" selected>Blank Page</option>
                 <option value="https://flashappai.org">FlashAppAI</option>
                 <option value="https://google.com">Google</option>
                 <option value="https://duckduckgo.com">DuckDuckGo</option>
-                <option value="about:blank">Blank Page</option>
               </select>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">New Tab Page</div>
+              <div class="setting-desc">Page to show when opening a new tab</div>
+            </div>
+            <div class="setting-control">
+              <select class="setting-select" id="settingNewTab">
+                <option value="about:blank" selected>Blank Page</option>
+                <option value="https://flashappai.org">FlashAppAI</option>
+                <option value="https://google.com">Google</option>
+                <option value="https://duckduckgo.com">DuckDuckGo</option>
+              </select>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Open Links in New Tab</div>
+              <div class="setting-desc">Open clicked links in new tab instead of popup</div>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="settingOpenInNewTab" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <div class="setting-label">Block Popups</div>
+              <div class="setting-desc">Prevent unwanted popup windows</div>
+            </div>
+            <div class="setting-control">
+              <label class="toggle-switch">
+                <input type="checkbox" id="settingBlockPopups" checked>
+                <span class="toggle-slider"></span>
+              </label>
             </div>
           </div>
           <div class="setting-row">
@@ -4085,34 +4123,90 @@
       }
     }
     
-    // Settings persistence
-    function loadSettings() {
-      const settings = JSON.parse(localStorage.getItem('flashappai-settings') || '{}');
-      
-      // Apply saved settings to form elements
-      Object.keys(settings).forEach(key => {
-        const el = document.getElementById(key);
-        if (el) {
-          if (el.type === 'checkbox') {
-            el.checked = settings[key];
-          } else {
-            el.value = settings[key];
+    // Settings persistence - use main process storage for proper persistence
+    async function loadSettings() {
+      try {
+        // Load from main process settings store
+        if (window.electron?.settings) {
+          const settings = await window.electron.settings.getAll();
+          console.log('📋 Loaded settings:', settings);
+          
+          // Map main process settings to UI elements
+          const settingMap = {
+            'settingHomePage': settings.homepage,
+            'settingNewTab': settings.newTabPage,
+            'settingOpenInNewTab': settings.openLinksInNewTab,
+            'settingBlockPopups': settings.blockPopups,
+            'settingShowBookmarkBar': settings.showBookmarkBar,
+            'settingDarkMode': settings.darkMode,
+            'settingAdBlock': settings.adBlockEnabled,
+            'settingTrackerBlock': settings.trackerBlockEnabled,
+          };
+          
+          Object.keys(settingMap).forEach(id => {
+            const el = document.getElementById(id);
+            const value = settingMap[id];
+            if (el && value !== undefined) {
+              if (el.type === 'checkbox') {
+                el.checked = value;
+              } else {
+                el.value = value;
+              }
+            }
+          });
+          
+          // Apply bookmark bar visibility
+          const bookmarkBar = document.getElementById('bookmarkBar');
+          if (bookmarkBar) {
+            bookmarkBar.classList.toggle('visible', settings.showBookmarkBar !== false);
           }
         }
-      });
+      } catch (e) {
+        console.error('Failed to load settings:', e);
+      }
     }
     
-    function saveSettings() {
-      const settings = {};
-      
-      document.querySelectorAll('.settings-section input, .settings-section select').forEach(el => {
-        if (el.id) {
-          settings[el.id] = el.type === 'checkbox' ? el.checked : el.value;
+    async function saveSettings() {
+      try {
+        // Map UI elements to main process settings
+        const updates = {};
+        
+        const settingElements = {
+          'settingHomePage': 'homepage',
+          'settingNewTab': 'newTabPage',
+          'settingOpenInNewTab': 'openLinksInNewTab',
+          'settingBlockPopups': 'blockPopups',
+          'settingShowBookmarkBar': 'showBookmarkBar',
+          'settingDarkMode': 'darkMode',
+          'settingAdBlock': 'adBlockEnabled',
+          'settingTrackerBlock': 'trackerBlockEnabled',
+        };
+        
+        Object.keys(settingElements).forEach(id => {
+          const el = document.getElementById(id);
+          if (el) {
+            const key = settingElements[id];
+            updates[key] = el.type === 'checkbox' ? el.checked : el.value;
+          }
+        });
+        
+        console.log('💾 Saving settings:', updates);
+        
+        if (window.electron?.settings) {
+          await window.electron.settings.update(updates);
         }
-      });
-      
-      localStorage.setItem('flashappai-settings', JSON.stringify(settings));
-      showToast('✅ Settings saved');
+        
+        // Apply immediate changes
+        const bookmarkBar = document.getElementById('bookmarkBar');
+        if (bookmarkBar && updates.showBookmarkBar !== undefined) {
+          bookmarkBar.classList.toggle('visible', updates.showBookmarkBar);
+        }
+        
+        showToast('✅ Settings saved');
+      } catch (e) {
+        console.error('Failed to save settings:', e);
+        showToast('❌ Failed to save settings');
+      }
     }
 
     // Toast notification

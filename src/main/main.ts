@@ -12,12 +12,37 @@ import {
 } from 'electron';
 import path from 'path';
 import fs from 'fs';
+import Store from 'electron-store';
 import { BookmarkManager } from './bookmark-manager';
 import { HistoryManager } from './history-manager';
 import { AIService } from './ai-service';
 import { securityManager } from './security-manager';
 import { torManager } from './tor-manager';
 import { ssoManager } from './sso-manager';
+
+// Settings interface
+interface BrowserSettings {
+  homepage: string;
+  newTabPage: string;
+  openLinksInNewTab: boolean;
+  blockPopups: boolean;
+  showBookmarkBar: boolean;
+  darkMode: boolean;
+  adBlockEnabled: boolean;
+  trackerBlockEnabled: boolean;
+}
+
+// Default settings
+const defaultSettings: BrowserSettings = {
+  homepage: 'about:blank',
+  newTabPage: 'about:blank',
+  openLinksInNewTab: true,
+  blockPopups: true,
+  showBookmarkBar: true,
+  darkMode: true,
+  adBlockEnabled: true,
+  trackerBlockEnabled: true,
+};
 
 console.log('🚀 FlashAppAI Browser starting...');
 
@@ -92,12 +117,46 @@ class FlashAppAIBrowser {
   private bookmarkManager: BookmarkManager;
   private historyManager: HistoryManager;
   private aiService: AIService;
+  
+  // Settings store
+  private settingsStore: Store<{ settings: BrowserSettings }>;
 
   constructor() {
     this.bookmarkManager = new BookmarkManager();
     this.historyManager = new HistoryManager();
     this.aiService = new AIService();
+    this.settingsStore = new Store<{ settings: BrowserSettings }>({
+      name: 'browser-settings',
+      defaults: {
+        settings: defaultSettings,
+      },
+    });
     this.init();
+  }
+  
+  // Get a setting
+  private getSetting<K extends keyof BrowserSettings>(key: K): BrowserSettings[K] {
+    const settings = this.settingsStore.get('settings', defaultSettings);
+    return settings[key] ?? defaultSettings[key];
+  }
+  
+  // Set a setting
+  private setSetting<K extends keyof BrowserSettings>(key: K, value: BrowserSettings[K]) {
+    const settings = this.settingsStore.get('settings', defaultSettings);
+    settings[key] = value;
+    this.settingsStore.set('settings', settings);
+  }
+  
+  // Get all settings
+  private getAllSettings(): BrowserSettings {
+    return this.settingsStore.get('settings', defaultSettings);
+  }
+  
+  // Update multiple settings
+  private updateSettings(updates: Partial<BrowserSettings>) {
+    const settings = this.settingsStore.get('settings', defaultSettings);
+    Object.assign(settings, updates);
+    this.settingsStore.set('settings', settings);
   }
 
   private init() {
@@ -206,11 +265,14 @@ class FlashAppAIBrowser {
     console.log('✅ Main window created');
   }
 
-  private createTab(url: string = 'https://flashappai.org'): string {
+  private createTab(url?: string): string {
     if (!this.mainWindow) return '';
+    
+    // If no URL provided, use the new tab page setting (default: blank)
+    const tabUrl = url || this.getSetting('newTabPage') || 'about:blank';
 
     const id = `tab-${++this.tabIdCounter}`;
-    console.log(`📑 Creating tab ${id}: ${url}`);
+    console.log(`📑 Creating tab ${id}: ${tabUrl}`);
 
     const view = new BrowserView({
       webPreferences: {
@@ -223,7 +285,7 @@ class FlashAppAIBrowser {
       },
     });
 
-    const tab: Tab = { id, url, title: 'New Tab', view };
+    const tab: Tab = { id, url: tabUrl, title: 'New Tab', view };
     this.tabs.set(id, tab);
 
     // Setup view events
@@ -297,7 +359,39 @@ class FlashAppAIBrowser {
       }, 50);
     });
 
-    view.webContents.loadURL(url);
+    // Handle popups and new window requests - open in new tab instead of popup window
+    view.webContents.setWindowOpenHandler(({ url, disposition }) => {
+      console.log(`🔗 Window open request: ${url} (${disposition})`);
+      
+      // Check if popups should be blocked
+      if (this.getSetting('blockPopups')) {
+        // Allow user-initiated navigation (ctrl+click, middle-click)
+        if (disposition === 'new-window' || disposition === 'background-tab' || 
+            disposition === 'foreground-tab') {
+          // Open in new tab instead of popup
+          if (this.getSetting('openLinksInNewTab')) {
+            this.createTab(url);
+            return { action: 'deny' }; // Deny popup, we opened it in a tab
+          }
+        }
+        
+        // Block unwanted popups
+        if (disposition === 'default') {
+          console.log('🚫 Blocked popup:', url);
+          return { action: 'deny' };
+        }
+      }
+      
+      // Open in new tab by default
+      if (this.getSetting('openLinksInNewTab')) {
+        this.createTab(url);
+        return { action: 'deny' };
+      }
+      
+      return { action: 'allow' };
+    });
+
+    view.webContents.loadURL(tabUrl);
     this.switchToTab(id);
 
     return id;
@@ -945,6 +1039,25 @@ class FlashAppAIBrowser {
 
     ipcMain.handle('bookmark:search', (_e, query: string) => {
       return this.bookmarkManager.search(query);
+    });
+
+    // Settings
+    ipcMain.handle('settings:get-all', () => {
+      return this.getAllSettings();
+    });
+
+    ipcMain.handle('settings:get', (_e, key: keyof BrowserSettings) => {
+      return this.getSetting(key);
+    });
+
+    ipcMain.handle('settings:set', (_e, key: keyof BrowserSettings, value: any) => {
+      this.setSetting(key, value);
+      return { success: true };
+    });
+
+    ipcMain.handle('settings:update', (_e, updates: Partial<BrowserSettings>) => {
+      this.updateSettings(updates);
+      return { success: true };
     });
 
     // History

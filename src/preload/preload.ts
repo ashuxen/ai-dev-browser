@@ -167,6 +167,14 @@ contextBridge.exposeInMainWorld('electron', {
     setTrackerBlock: (enabled: boolean) => ipcRenderer.invoke('blocking:set-tracker-block', enabled),
   },
 
+  // Settings management
+  settings: {
+    getAll: () => ipcRenderer.invoke('settings:get-all'),
+    get: (key: string) => ipcRenderer.invoke('settings:get', key),
+    set: (key: string, value: any) => ipcRenderer.invoke('settings:set', key, value),
+    update: (updates: any) => ipcRenderer.invoke('settings:update', updates),
+  },
+
   // Bookmark management
   bookmarks: {
     add: (bookmark: any) => ipcRenderer.invoke('bookmark:add', bookmark),
