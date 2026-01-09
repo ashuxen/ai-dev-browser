@@ -13,6 +13,7 @@ import {
 import path from 'path';
 import fs from 'fs';
 import Store from 'electron-store';
+import { autoUpdater, UpdateInfo } from 'electron-updater';
 import { BookmarkManager } from './bookmark-manager';
 import { HistoryManager } from './history-manager';
 import { AIService } from './ai-service';
@@ -191,6 +192,11 @@ class FlashAppAIBrowser {
       this.setupIPC();
       this.setupMenu();
       this.setupSecurityIPC();
+      
+      // Setup auto-updater (only in production)
+      if (app.isPackaged) {
+        this.setupAutoUpdater();
+      }
     });
 
     app.on('window-all-closed', () => {
@@ -1703,6 +1709,140 @@ class FlashAppAIBrowser {
     });
 
     console.log('✅ Security IPC handlers registered');
+  }
+
+  private setupAutoUpdater() {
+    console.log('🔄 Setting up auto-updater...');
+    
+    // Configure auto-updater
+    autoUpdater.autoDownload = false; // Don't auto-download, ask user first
+    autoUpdater.autoInstallOnAppQuit = true;
+    
+    // Set the GitHub releases URL
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: 'ashuxen',
+      repo: 'ai-dev-browser',
+    });
+
+    // Update events
+    autoUpdater.on('checking-for-update', () => {
+      console.log('🔍 Checking for updates...');
+      this.mainWindow?.webContents.send('update:status', { status: 'checking' });
+    });
+
+    autoUpdater.on('update-available', (info: UpdateInfo) => {
+      console.log('📦 Update available:', info.version);
+      this.mainWindow?.webContents.send('update:status', { 
+        status: 'available', 
+        version: info.version,
+        releaseNotes: info.releaseNotes,
+      });
+      
+      // Show notification
+      if (Notification.isSupported()) {
+        new Notification({
+          title: '🚀 Update Available',
+          body: `FlashAppAI Browser ${info.version} is available. Click to download.`,
+        }).show();
+      }
+      
+      // Ask user if they want to download
+      dialog.showMessageBox(this.mainWindow!, {
+        type: 'info',
+        title: 'Update Available',
+        message: `A new version (${info.version}) is available!`,
+        detail: 'Would you like to download and install it now?',
+        buttons: ['Download Now', 'Later'],
+        defaultId: 0,
+      }).then(({ response }) => {
+        if (response === 0) {
+          autoUpdater.downloadUpdate();
+        }
+      });
+    });
+
+    autoUpdater.on('update-not-available', () => {
+      console.log('✅ App is up to date');
+      this.mainWindow?.webContents.send('update:status', { status: 'up-to-date' });
+    });
+
+    autoUpdater.on('download-progress', (progress) => {
+      console.log(`📥 Download progress: ${Math.round(progress.percent)}%`);
+      this.mainWindow?.webContents.send('update:status', { 
+        status: 'downloading',
+        percent: progress.percent,
+        transferred: progress.transferred,
+        total: progress.total,
+      });
+    });
+
+    autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
+      console.log('✅ Update downloaded:', info.version);
+      this.mainWindow?.webContents.send('update:status', { 
+        status: 'downloaded',
+        version: info.version,
+      });
+      
+      // Ask user to restart
+      dialog.showMessageBox(this.mainWindow!, {
+        type: 'info',
+        title: 'Update Ready',
+        message: 'Update downloaded!',
+        detail: `Version ${info.version} has been downloaded. Restart now to install?`,
+        buttons: ['Restart Now', 'Later'],
+        defaultId: 0,
+      }).then(({ response }) => {
+        if (response === 0) {
+          autoUpdater.quitAndInstall(false, true);
+        }
+      });
+    });
+
+    autoUpdater.on('error', (error) => {
+      console.error('❌ Auto-updater error:', error);
+      this.mainWindow?.webContents.send('update:status', { 
+        status: 'error',
+        error: error.message,
+      });
+    });
+
+    // Check for updates after a short delay
+    setTimeout(() => {
+      autoUpdater.checkForUpdates().catch((err) => {
+        console.log('Update check skipped:', err.message);
+      });
+    }, 5000); // Check 5 seconds after app starts
+    
+    // Also check periodically (every 4 hours)
+    setInterval(() => {
+      autoUpdater.checkForUpdates().catch(() => {});
+    }, 4 * 60 * 60 * 1000);
+
+    // IPC handlers for manual update control
+    ipcMain.handle('update:check', async () => {
+      try {
+        const result = await autoUpdater.checkForUpdates();
+        return { success: true, updateInfo: result?.updateInfo };
+      } catch (error: any) {
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('update:download', async () => {
+      try {
+        await autoUpdater.downloadUpdate();
+        return { success: true };
+      } catch (error: any) {
+        return { success: false, error: error.message };
+      }
+    });
+
+    ipcMain.handle('update:install', () => {
+      autoUpdater.quitAndInstall(false, true);
+    });
+
+    console.log('✅ Auto-updater configured');
   }
 
   private setupMenu() {

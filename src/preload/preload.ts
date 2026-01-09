@@ -267,13 +267,13 @@ contextBridge.exposeInMainWorld('electron', {
     },
   },
 
-  // Updates
+  // Updates (auto-update functionality)
   updates: {
     check: () => ipcRenderer.invoke('update:check'),
     download: () => ipcRenderer.invoke('update:download'),
     install: () => ipcRenderer.invoke('update:install'),
     onStatus: (callback: (status: any) => void) => {
-      ipcRenderer.on('update-status', (_event, status) => callback(status));
+      ipcRenderer.on('update:status', (_event, status) => callback(status));
     },
   },
 
