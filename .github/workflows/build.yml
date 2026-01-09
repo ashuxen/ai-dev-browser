@@ -51,26 +51,41 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build for Windows (creates installer)
-        run: npm run make -- --platform=win32
+      - name: Package app with Electron Forge
+        run: npm run package
+
+      - name: Find packaged folder name
+        id: find-folder
+        run: |
+          $folder = Get-ChildItem -Path "out" -Directory | Where-Object { $_.Name -like "*win32-x64*" } | Select-Object -First 1
+          echo "PACKAGED_FOLDER=$($folder.Name)" >> $env:GITHUB_OUTPUT
+          echo "Found folder: $($folder.Name)"
+        shell: pwsh
+
+      - name: Create Windows installer with electron-builder
+        run: |
+          npx electron-builder --win --prepackaged "out/${{ steps.find-folder.outputs.PACKAGED_FOLDER }}"
+        shell: pwsh
 
       - name: List all output files
         run: |
-          echo "=== All files in out/make ==="
-          Get-ChildItem -Path "out/make" -Recurse -File | ForEach-Object { $_.FullName }
-          echo "=== Looking for .exe files ==="
-          Get-ChildItem -Path "out" -Recurse -Filter "*.exe" | ForEach-Object { $_.FullName }
+          echo "=== Files in dist folder ==="
+          Get-ChildItem -Path "dist" -Recurse -File | ForEach-Object { $_.FullName }
         shell: pwsh
 
-      - name: Upload Windows installer
+      - name: Also create ZIP of portable version
+        run: |
+          Compress-Archive -Path "out/${{ steps.find-folder.outputs.PACKAGED_FOLDER }}" -DestinationPath "dist/FlashAppAI-Browser-win32-x64-portable.zip"
+        shell: pwsh
+
+      - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-x64
           path: |
-            out/make/**/*.exe
-            out/make/**/*.zip
-            out/make/**/*.nupkg
-          if-no-files-found: warn
+            dist/*.exe
+            dist/*.zip
+          if-no-files-found: error
 
   build-linux:
     runs-on: ubuntu-latest

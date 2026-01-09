@@ -1,7 +1,7 @@
 {
   "name": "flashappai-browser",
   "productName": "FlashAppAI Browser",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "AI-powered browser for developers working with cloud-based code editors",
   "main": ".vite/build/main.js",
   "author": {
@@ -18,10 +18,39 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
+    "build:win": "npm run package && electron-builder --win --dir=out/FlashAppAI\\ Browser-win32-x64",
     "lint": "eslint src --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
+  },
+  "build": {
+    "appId": "com.flashappai.browser",
+    "productName": "FlashAppAI Browser",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icons/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icons/icon.ico",
+      "uninstallerIcon": "assets/icons/icon.ico",
+      "installerHeaderIcon": "assets/icons/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "FlashAppAI Browser"
+    }
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
@@ -50,6 +79,7 @@
     "@typescript-eslint/parser": "^6.0.0",
     "@vitejs/plugin-react": "^4.2.0",
     "electron": "^28.0.0",
+    "electron-builder": "^26.4.0",
     "eslint": "^8.0.0",
     "eslint-plugin-react": "^7.33.0",
     "eslint-plugin-react-hooks": "^4.6.0",
