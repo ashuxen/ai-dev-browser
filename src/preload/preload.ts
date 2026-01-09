@@ -171,6 +171,7 @@ contextBridge.exposeInMainWorld('electron', {
   bookmarks: {
     add: (bookmark: any) => ipcRenderer.invoke('bookmark:add', bookmark),
     remove: (id: string) => ipcRenderer.invoke('bookmark:remove', id),
+    update: (id: string, updates: any) => ipcRenderer.invoke('bookmark:update', id, updates),
     getAll: () => ipcRenderer.invoke('bookmark:get-all'),
     search: (query: string) => ipcRenderer.invoke('bookmark:search', query),
   },

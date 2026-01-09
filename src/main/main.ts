@@ -74,7 +74,7 @@ class FlashAppAIBrowser {
   // AI Panel
   private aiPanelView: BrowserView | null = null;
   private aiPanelOpen = false;
-  private aiPanelWidth = 400;
+  private aiPanelWidth = 0; // 0 = use responsive calculation, >0 = manual resize
   
   // Recently Closed Tabs
   private recentlyClosed: ClosedTab[] = [];
@@ -110,6 +110,15 @@ class FlashAppAIBrowser {
 
     app.whenReady().then(() => {
       console.log('✅ App ready');
+      
+      // Performance optimizations
+      console.log('⚡ Applying performance optimizations...');
+      app.commandLine.appendSwitch('enable-features', 'VaapiVideoDecoder'); // Hardware video decode
+      app.commandLine.appendSwitch('disable-software-rasterizer'); // Use GPU
+      app.commandLine.appendSwitch('enable-gpu-rasterization'); // GPU rendering
+      
+      // Configure default session cache
+      session.defaultSession.setPreloads([]); // No custom preloads for pages
       
       // Initialize security for default session
       console.log('🔐 Initializing security features...');
@@ -207,6 +216,10 @@ class FlashAppAIBrowser {
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
+        // Performance optimizations
+        backgroundThrottling: false, // Keep page responsive when in background
+        enableBlinkFeatures: 'CSSContainerQueries', // Modern CSS features
+        spellcheck: false, // Disable for performance (can be toggled)
       },
     });
 
@@ -367,8 +380,19 @@ class FlashAppAIBrowser {
     if (!tab) return;
 
     const bounds = this.mainWindow.getBounds();
-    const TOOLBAR_HEIGHT = 88; // Tab bar + address bar
-    const aiWidth = this.aiPanelOpen ? this.aiPanelWidth : 0;
+    const TOOLBAR_HEIGHT = 120; // Tab bar (44px) + address bar (44px) + bookmark bar (32px)
+    
+    // Calculate AI panel width responsively based on window width
+    let aiWidth = 0;
+    if (this.aiPanelOpen) {
+      // If manually resized, use that width; otherwise calculate responsive width
+      if (this.aiPanelWidth > 0) {
+        aiWidth = this.aiPanelWidth;
+      } else {
+        // Responsive: 30% of window, clamped between 350-600px
+        aiWidth = Math.min(Math.max(350, bounds.width * 0.30), 600);
+      }
+    }
 
     tab.view.setBounds({
       x: this.sidebarWidth,
@@ -378,14 +402,16 @@ class FlashAppAIBrowser {
     });
 
     // Update AI panel bounds if open
-    // Leave space for AI panel header (56px) + quick actions (50px) + selector (50px) = ~156px
-    const AI_PANEL_HEADER_HEIGHT = 200; // Header + selector + quick actions
+    // Calculate header height proportionally (about 15% of panel height, min 120px, max 180px)
     if (this.aiPanelView && this.aiPanelOpen) {
+      const panelHeight = bounds.height - TOOLBAR_HEIGHT;
+      const AI_PANEL_HEADER_HEIGHT = Math.min(Math.max(120, panelHeight * 0.15), 180);
+      
       this.aiPanelView.setBounds({
         x: bounds.width - aiWidth,
         y: TOOLBAR_HEIGHT + AI_PANEL_HEADER_HEIGHT,
         width: aiWidth,
-        height: bounds.height - TOOLBAR_HEIGHT - AI_PANEL_HEADER_HEIGHT,
+        height: panelHeight - AI_PANEL_HEADER_HEIGHT,
       });
     }
   }
@@ -463,8 +489,16 @@ class FlashAppAIBrowser {
     if (width === 0) {
       this.aiPanelWidth = 0;
       this.aiPanelOpen = false;
+    } else if (width === -1) {
+      // -1 = reset to responsive/auto size
+      this.aiPanelWidth = 0;
+      this.aiPanelOpen = true;
     } else {
-      this.aiPanelWidth = Math.max(320, Math.min(800, width));
+      // Manual resize: clamp between reasonable bounds (20-70% of window)
+      const bounds = this.mainWindow?.getBounds();
+      const maxWidth = bounds ? bounds.width * 0.7 : 1000;
+      const minWidth = 280;
+      this.aiPanelWidth = Math.max(minWidth, Math.min(maxWidth, width));
       this.aiPanelOpen = true;
     }
     this.updateTabBounds();
@@ -899,6 +933,10 @@ class FlashAppAIBrowser {
 
     ipcMain.handle('bookmark:remove', (_e, id: string) => {
       return this.bookmarkManager.remove(id);
+    });
+
+    ipcMain.handle('bookmark:update', (_e, id: string, updates: any) => {
+      return this.bookmarkManager.update(id, updates);
     });
 
     ipcMain.handle('bookmark:get-all', () => {
