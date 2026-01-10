@@ -221,11 +221,137 @@
       height: 36px;
       border: 1px solid var(--border-color);
       transition: var(--transition);
+      position: relative;
     }
 
     .url-container:focus-within {
       border-color: var(--accent-teal);
       box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.15);
+    }
+
+    /* URL Autocomplete Dropdown */
+    .url-autocomplete {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin-top: 4px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 10000;
+      display: none;
+    }
+
+    .url-autocomplete.visible {
+      display: block;
+    }
+
+    .url-autocomplete::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .url-autocomplete::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 3px;
+    }
+
+    .autocomplete-section {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .autocomplete-section:last-child {
+      border-bottom: none;
+    }
+
+    .autocomplete-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 4px 12px 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .autocomplete-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: var(--transition);
+      gap: 10px;
+    }
+
+    .autocomplete-item:hover,
+    .autocomplete-item.selected {
+      background: var(--hover-bg);
+    }
+
+    .autocomplete-item.selected {
+      background: var(--active-bg);
+    }
+
+    .autocomplete-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: var(--bg-tertiary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: var(--accent-teal);
+      flex-shrink: 0;
+    }
+
+    .autocomplete-icon.history {
+      color: var(--text-muted);
+    }
+
+    .autocomplete-icon.bookmark {
+      color: #fbbf24;
+    }
+
+    .autocomplete-icon.search {
+      color: var(--accent-purple);
+    }
+
+    .autocomplete-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .autocomplete-title {
+      font-size: 13px;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .autocomplete-title mark {
+      background: rgba(0, 217, 255, 0.3);
+      color: var(--accent-teal);
+      border-radius: 2px;
+      padding: 0 2px;
+    }
+
+    .autocomplete-url {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .autocomplete-url mark {
+      background: rgba(0, 217, 255, 0.2);
+      color: var(--accent-teal);
+      border-radius: 2px;
     }
 
     .url-icon {
@@ -2329,7 +2455,12 @@
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
         </span>
-        <input type="text" class="url-bar" id="urlBar" placeholder="Search or enter URL..." />
+        <input type="text" class="url-bar" id="urlBar" placeholder="Search or enter URL..." autocomplete="off" />
+        
+        <!-- URL Autocomplete Dropdown -->
+        <div class="url-autocomplete" id="urlAutocomplete">
+          <!-- Suggestions will be populated by JavaScript -->
+        </div>
       </div>
 
       <div class="toolbar-actions">
@@ -4209,6 +4340,230 @@
       }
     }
 
+    // ===== URL AUTOCOMPLETE =====
+    let autocompleteSelectedIndex = -1;
+    let autocompleteItems = [];
+    
+    // Popular sites for quick access
+    const popularSites = [
+      { title: 'Google', url: 'https://google.com', icon: '🔍' },
+      { title: 'YouTube', url: 'https://youtube.com', icon: '▶️' },
+      { title: 'GitHub', url: 'https://github.com', icon: '🐙' },
+      { title: 'Stack Overflow', url: 'https://stackoverflow.com', icon: '📚' },
+      { title: 'ChatGPT', url: 'https://chat.openai.com', icon: '🤖' },
+      { title: 'Claude', url: 'https://claude.ai', icon: '🧠' },
+      { title: 'Twitter/X', url: 'https://x.com', icon: '🐦' },
+      { title: 'Reddit', url: 'https://reddit.com', icon: '🔴' },
+      { title: 'LinkedIn', url: 'https://linkedin.com', icon: '💼' },
+      { title: 'Amazon', url: 'https://amazon.com', icon: '📦' },
+    ];
+
+    function setupUrlAutocomplete() {
+      const autocomplete = document.getElementById('urlAutocomplete');
+      if (!urlBar || !autocomplete) return;
+
+      let debounceTimer;
+
+      // Input event - search as user types
+      urlBar.addEventListener('input', (e) => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          const query = e.target.value.trim();
+          if (query.length >= 1) {
+            showAutocomplete(query);
+          } else {
+            hideAutocomplete();
+          }
+        }, 150); // Debounce for performance
+      });
+
+      // Focus event - show suggestions
+      urlBar.addEventListener('focus', () => {
+        const query = urlBar.value.trim();
+        if (query.length >= 1) {
+          showAutocomplete(query);
+        }
+      });
+
+      // Blur event - hide after delay (allow click on item)
+      urlBar.addEventListener('blur', () => {
+        setTimeout(hideAutocomplete, 200);
+      });
+
+      // Keyboard navigation
+      urlBar.addEventListener('keydown', (e) => {
+        if (!autocomplete.classList.contains('visible')) return;
+
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          selectAutocompleteItem(autocompleteSelectedIndex + 1);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          selectAutocompleteItem(autocompleteSelectedIndex - 1);
+        } else if (e.key === 'Enter' && autocompleteSelectedIndex >= 0) {
+          e.preventDefault();
+          const item = autocompleteItems[autocompleteSelectedIndex];
+          if (item) {
+            navigateToSuggestion(item.url);
+          }
+        } else if (e.key === 'Escape') {
+          hideAutocomplete();
+        }
+      });
+
+      console.log('✅ URL Autocomplete initialized');
+    }
+
+    async function showAutocomplete(query) {
+      const autocomplete = document.getElementById('urlAutocomplete');
+      if (!autocomplete) return;
+
+      const lowerQuery = query.toLowerCase();
+      autocompleteItems = [];
+      let html = '';
+
+      // Search bookmarks
+      const matchingBookmarks = bookmarks.filter(b => 
+        b.title.toLowerCase().includes(lowerQuery) || 
+        b.url.toLowerCase().includes(lowerQuery)
+      ).slice(0, 5);
+
+      if (matchingBookmarks.length > 0) {
+        html += `<div class="autocomplete-section">
+          <div class="autocomplete-section-title">⭐ Bookmarks</div>`;
+        matchingBookmarks.forEach((b, i) => {
+          autocompleteItems.push({ type: 'bookmark', ...b });
+          html += createAutocompleteItem(b.title, b.url, 'bookmark', '★', lowerQuery, autocompleteItems.length - 1);
+        });
+        html += `</div>`;
+      }
+
+      // Search history
+      const matchingHistory = history.filter(h => 
+        h.title.toLowerCase().includes(lowerQuery) || 
+        h.url.toLowerCase().includes(lowerQuery)
+      ).slice(0, 5);
+
+      if (matchingHistory.length > 0) {
+        html += `<div class="autocomplete-section">
+          <div class="autocomplete-section-title">🕐 History</div>`;
+        matchingHistory.forEach((h, i) => {
+          autocompleteItems.push({ type: 'history', ...h });
+          html += createAutocompleteItem(h.title, h.url, 'history', '🕐', lowerQuery, autocompleteItems.length - 1);
+        });
+        html += `</div>`;
+      }
+
+      // Search popular sites
+      const matchingPopular = popularSites.filter(s => 
+        s.title.toLowerCase().includes(lowerQuery) || 
+        s.url.toLowerCase().includes(lowerQuery)
+      ).slice(0, 4);
+
+      if (matchingPopular.length > 0) {
+        html += `<div class="autocomplete-section">
+          <div class="autocomplete-section-title">🌐 Popular Sites</div>`;
+        matchingPopular.forEach((s, i) => {
+          autocompleteItems.push({ type: 'popular', ...s });
+          html += createAutocompleteItem(s.title, s.url, 'search', s.icon, lowerQuery, autocompleteItems.length - 1);
+        });
+        html += `</div>`;
+      }
+
+      // Add search suggestion
+      if (!query.includes('.') && !query.startsWith('http')) {
+        html += `<div class="autocomplete-section">
+          <div class="autocomplete-section-title">🔎 Search</div>`;
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+        autocompleteItems.push({ type: 'search', title: `Search for "${query}"`, url: searchUrl });
+        html += createAutocompleteItem(`Search for "${query}"`, 'Google Search', 'search', '🔍', '', autocompleteItems.length - 1);
+        html += `</div>`;
+      }
+
+      if (autocompleteItems.length > 0) {
+        autocomplete.innerHTML = html;
+        autocomplete.classList.add('visible');
+        autocompleteSelectedIndex = -1;
+        
+        // Add click handlers
+        autocomplete.querySelectorAll('.autocomplete-item').forEach((item, index) => {
+          item.addEventListener('click', () => {
+            const suggestion = autocompleteItems[index];
+            if (suggestion) {
+              navigateToSuggestion(suggestion.url);
+            }
+          });
+        });
+      } else {
+        hideAutocomplete();
+      }
+    }
+
+    function createAutocompleteItem(title, url, iconClass, icon, query, index) {
+      const highlightedTitle = highlightMatch(title, query);
+      const highlightedUrl = highlightMatch(url, query);
+      return `
+        <div class="autocomplete-item" data-index="${index}">
+          <div class="autocomplete-icon ${iconClass}">${icon}</div>
+          <div class="autocomplete-content">
+            <div class="autocomplete-title">${highlightedTitle}</div>
+            <div class="autocomplete-url">${highlightedUrl}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function highlightMatch(text, query) {
+      if (!query || !text) return escapeHtml(text || '');
+      const escaped = escapeHtml(text);
+      const regex = new RegExp(`(${escapeRegex(query)})`, 'gi');
+      return escaped.replace(regex, '<mark>$1</mark>');
+    }
+
+    function escapeRegex(string) {
+      return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function selectAutocompleteItem(index) {
+      const autocomplete = document.getElementById('urlAutocomplete');
+      const items = autocomplete?.querySelectorAll('.autocomplete-item');
+      if (!items || items.length === 0) return;
+
+      // Wrap around
+      if (index < 0) index = items.length - 1;
+      if (index >= items.length) index = 0;
+
+      // Update selection
+      items.forEach((item, i) => {
+        item.classList.toggle('selected', i === index);
+      });
+
+      autocompleteSelectedIndex = index;
+
+      // Update URL bar with selected item
+      const item = autocompleteItems[index];
+      if (item) {
+        urlBar.value = item.url;
+      }
+
+      // Scroll into view
+      items[index]?.scrollIntoView({ block: 'nearest' });
+    }
+
+    function hideAutocomplete() {
+      const autocomplete = document.getElementById('urlAutocomplete');
+      if (autocomplete) {
+        autocomplete.classList.remove('visible');
+        autocompleteSelectedIndex = -1;
+      }
+    }
+
+    function navigateToSuggestion(url) {
+      hideAutocomplete();
+      urlBar.value = url;
+      window.electron.tabs.navigate(url);
+    }
+
     // Toast notification
     function showToast(message) {
       let toast = document.getElementById('toast');
@@ -4287,8 +4642,12 @@
       urlBar.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && urlBar.value.trim()) {
           window.electron.tabs.navigate(urlBar.value.trim());
+          hideAutocomplete();
         }
       });
+
+      // URL Autocomplete
+      setupUrlAutocomplete();
 
       // Sidebar toggles
       bookmarkBtn.addEventListener('click', () => {
