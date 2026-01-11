@@ -35,7 +35,7 @@ interface BrowserSettings {
 
 // Default settings
 const defaultSettings: BrowserSettings = {
-  homepage: 'about:blank',
+  homepage: 'https://flashappai.org',
   newTabPage: 'about:blank',
   openLinksInNewTab: true,
   blockPopups: true,
@@ -259,8 +259,10 @@ class FlashAppAIBrowser {
 
     // Create initial tab after UI loads
     setTimeout(() => {
-      console.log('✅ Creating initial tab');
-      this.createTab('https://flashappai.org');
+      // Use the user's homepage setting (default: flashappai.org)
+      const homepage = this.getSetting('homepage') || 'https://flashappai.org';
+      console.log('✅ Creating initial tab with homepage:', homepage);
+      this.createTab(homepage);
     }, 300);
 
     this.mainWindow.on('resize', () => this.updateTabBounds());
@@ -318,6 +320,17 @@ class FlashAppAIBrowser {
 
     view.webContents.on('did-stop-loading', () => {
       this.notifyTabUpdate();
+      // Ensure bounds are correct after page load
+      if (this.activeTabId === id) {
+        this.updateTabBounds();
+      }
+    });
+
+    // Ensure view bounds are correct after any navigation finishes
+    view.webContents.on('did-finish-load', () => {
+      if (this.activeTabId === id) {
+        this.updateTabBounds();
+      }
     });
 
     // Handle fullscreen mode (for videos, etc.)
@@ -700,15 +713,19 @@ class FlashAppAIBrowser {
   private notifyTabUpdate() {
     if (!this.mainWindow) return;
 
-    const tabsData = Array.from(this.tabs.values()).map(t => ({
-      id: t.id,
-      url: t.url,
-      title: t.title,
-      isActive: t.id === this.activeTabId,
-      canGoBack: t.view.webContents.canGoBack(),
-      canGoForward: t.view.webContents.canGoForward(),
-      isLoading: t.view.webContents.isLoading(),
-    }));
+    const tabsData = Array.from(this.tabs.values()).map(t => {
+      // Safe check for view and webContents existence
+      const viewValid = t.view && t.view.webContents && !t.view.webContents.isDestroyed();
+      return {
+        id: t.id,
+        url: t.url,
+        title: t.title,
+        isActive: t.id === this.activeTabId,
+        canGoBack: viewValid ? t.view.webContents.canGoBack() : false,
+        canGoForward: viewValid ? t.view.webContents.canGoForward() : false,
+        isLoading: viewValid ? t.view.webContents.isLoading() : false,
+      };
+    });
 
     this.mainWindow.webContents.send('tabs-updated', {
       tabs: tabsData,
@@ -870,35 +887,49 @@ class FlashAppAIBrowser {
 
     ipcMain.handle('tab:back', () => {
       const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
-      if (tab?.view.webContents.canGoBack()) {
+      if (!tab?.view?.webContents || tab.view.webContents.isDestroyed()) return;
+      
+      if (tab.view.webContents.canGoBack()) {
         tab.view.webContents.goBack();
+        // Ensure bounds are correct after navigation
+        setTimeout(() => this.updateTabBounds(), 100);
       }
     });
 
     ipcMain.handle('tab:forward', () => {
       const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
-      if (tab?.view.webContents.canGoForward()) {
+      if (!tab?.view?.webContents || tab.view.webContents.isDestroyed()) return;
+      
+      if (tab.view.webContents.canGoForward()) {
         tab.view.webContents.goForward();
+        // Ensure bounds are correct after navigation
+        setTimeout(() => this.updateTabBounds(), 100);
       }
     });
 
     ipcMain.handle('tab:reload', () => {
       const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
-      if (tab) {
-        tab.view.webContents.reload();
-      }
+      if (!tab?.view?.webContents || tab.view.webContents.isDestroyed()) return;
+      
+      tab.view.webContents.reload();
+      // Ensure bounds are correct after reload
+      setTimeout(() => this.updateTabBounds(), 100);
     });
 
     ipcMain.handle('tab:get-all', () => {
-      return Array.from(this.tabs.values()).map(t => ({
-        id: t.id,
-        url: t.url,
-        title: t.title,
-        isActive: t.id === this.activeTabId,
-        canGoBack: t.view.webContents.canGoBack(),
-        canGoForward: t.view.webContents.canGoForward(),
-        isLoading: t.view.webContents.isLoading(),
-      }));
+      return Array.from(this.tabs.values()).map(t => {
+        // Safe check for view and webContents existence
+        const viewValid = t.view && t.view.webContents && !t.view.webContents.isDestroyed();
+        return {
+          id: t.id,
+          url: t.url,
+          title: t.title,
+          isActive: t.id === this.activeTabId,
+          canGoBack: viewValid ? t.view.webContents.canGoBack() : false,
+          canGoForward: viewValid ? t.view.webContents.canGoForward() : false,
+          isLoading: viewValid ? t.view.webContents.isLoading() : false,
+        };
+      });
     });
 
     // Get page content for AI summarization
@@ -1027,7 +1058,7 @@ class FlashAppAIBrowser {
     });
 
     // Bookmarks
-    ipcMain.handle('bookmark:add', (_e, bookmark: { url: string; title: string }) => {
+    ipcMain.handle('bookmark:add', (_e, bookmark: { url: string; title: string; folderId?: string; tags?: string[] }) => {
       return this.bookmarkManager.add(bookmark);
     });
 
@@ -1043,8 +1074,82 @@ class FlashAppAIBrowser {
       return this.bookmarkManager.getAll();
     });
 
+    ipcMain.handle('bookmark:get-by-folder', (_e, folderId: string) => {
+      return this.bookmarkManager.getByFolder(folderId);
+    });
+
     ipcMain.handle('bookmark:search', (_e, query: string) => {
       return this.bookmarkManager.search(query);
+    });
+
+    // Bookmark Folders
+    ipcMain.handle('bookmark:get-folders', () => {
+      return this.bookmarkManager.getAllFolders();
+    });
+
+    ipcMain.handle('bookmark:create-folder', (_e, name: string, parentId?: string) => {
+      return this.bookmarkManager.createFolder(name, parentId);
+    });
+
+    ipcMain.handle('bookmark:delete-folder', (_e, id: string) => {
+      return this.bookmarkManager.deleteFolder(id);
+    });
+
+    ipcMain.handle('bookmark:move-to-folder', (_e, bookmarkId: string, folderId: string) => {
+      return this.bookmarkManager.update(bookmarkId, { folderId });
+    });
+
+    // AI Bookmark Organization - suggest folder based on URL/title
+    ipcMain.handle('bookmark:suggest-folder', (_e, url: string, title: string) => {
+      const folders = this.bookmarkManager.getAllFolders();
+      const existingBookmarks = this.bookmarkManager.getAll();
+      
+      // Simple AI logic: suggest folder based on domain or keywords
+      try {
+        const urlObj = new URL(url);
+        const domain = urlObj.hostname.replace('www.', '');
+        const lowerTitle = title.toLowerCase();
+        
+        // Check if similar bookmarks exist in a folder
+        const similarBookmark = existingBookmarks.find(b => {
+          try {
+            const bDomain = new URL(b.url).hostname.replace('www.', '');
+            return bDomain === domain && b.folderId;
+          } catch { return false; }
+        });
+        
+        if (similarBookmark?.folderId) {
+          const folder = folders.find(f => f.id === similarBookmark.folderId);
+          return { suggestedFolderId: similarBookmark.folderId, suggestedFolderName: folder?.name, reason: `Similar to other ${domain} bookmarks` };
+        }
+        
+        // Keyword-based suggestions
+        const keywordFolders: Record<string, string[]> = {
+          'Work': ['github', 'gitlab', 'slack', 'jira', 'confluence', 'notion', 'trello', 'asana', 'linear'],
+          'Social': ['twitter', 'facebook', 'instagram', 'linkedin', 'reddit', 'discord', 'x.com'],
+          'Shopping': ['amazon', 'ebay', 'etsy', 'shopify', 'aliexpress', 'walmart', 'target'],
+          'News': ['news', 'bbc', 'cnn', 'nytimes', 'guardian', 'reuters', 'techcrunch'],
+          'Learning': ['udemy', 'coursera', 'youtube', 'stackoverflow', 'medium', 'dev.to', 'tutorial', 'learn'],
+          'Entertainment': ['netflix', 'hulu', 'spotify', 'twitch', 'gaming', 'movie', 'music'],
+        };
+        
+        for (const [folderName, keywords] of Object.entries(keywordFolders)) {
+          if (keywords.some(kw => domain.includes(kw) || lowerTitle.includes(kw))) {
+            // Check if folder exists
+            const existingFolder = folders.find(f => f.name.toLowerCase() === folderName.toLowerCase());
+            return { 
+              suggestedFolderId: existingFolder?.id || null, 
+              suggestedFolderName: folderName,
+              reason: `Based on content type`,
+              createNew: !existingFolder
+            };
+          }
+        }
+        
+        return { suggestedFolderId: 'other', suggestedFolderName: 'Other Bookmarks', reason: 'Default location' };
+      } catch {
+        return { suggestedFolderId: 'other', suggestedFolderName: 'Other Bookmarks', reason: 'Default location' };
+      }
     });
 
     // Settings

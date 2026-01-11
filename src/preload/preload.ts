@@ -181,7 +181,15 @@ contextBridge.exposeInMainWorld('electron', {
     remove: (id: string) => ipcRenderer.invoke('bookmark:remove', id),
     update: (id: string, updates: any) => ipcRenderer.invoke('bookmark:update', id, updates),
     getAll: () => ipcRenderer.invoke('bookmark:get-all'),
+    getByFolder: (folderId: string) => ipcRenderer.invoke('bookmark:get-by-folder', folderId),
     search: (query: string) => ipcRenderer.invoke('bookmark:search', query),
+    // Folder management
+    getFolders: () => ipcRenderer.invoke('bookmark:get-folders'),
+    createFolder: (name: string, parentId?: string) => ipcRenderer.invoke('bookmark:create-folder', name, parentId),
+    deleteFolder: (id: string) => ipcRenderer.invoke('bookmark:delete-folder', id),
+    moveToFolder: (bookmarkId: string, folderId: string) => ipcRenderer.invoke('bookmark:move-to-folder', bookmarkId, folderId),
+    // AI organization
+    suggestFolder: (url: string, title: string) => ipcRenderer.invoke('bookmark:suggest-folder', url, title),
   },
 
   // History management
