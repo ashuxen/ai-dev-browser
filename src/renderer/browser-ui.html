@@ -989,35 +989,52 @@
       position: absolute;
       left: 0;
       top: 0;
-      width: 6px;
+      width: 8px;
       height: 100%;
       cursor: ew-resize;
-      background: var(--accent-teal);
+      background: linear-gradient(180deg, var(--accent-teal), var(--accent-purple));
       z-index: 10001;
       transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .ai-panel-resize-handle:hover,
     .ai-panel-resize-handle.dragging {
-      background: var(--accent-purple);
-      width: 8px;
-      box-shadow: 0 0 10px var(--accent-purple);
+      background: linear-gradient(180deg, var(--accent-purple), var(--accent-teal));
+      width: 10px;
+      box-shadow: -2px 0 15px rgba(0, 217, 255, 0.5), 2px 0 15px rgba(139, 92, 246, 0.5);
     }
 
     /* Grip dots on the divider */
     .ai-panel-resize-handle::before {
-      content: '⋮⋮';
+      content: '⋮⋮⋮';
       position: absolute;
       left: 50%;
       top: 50%;
       transform: translate(-50%, -50%);
-      color: rgba(255, 255, 255, 0.6);
-      font-size: 12px;
-      letter-spacing: -2px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+      letter-spacing: -3px;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     }
 
     .ai-panel-resize-handle:hover::before {
       color: white;
+      font-size: 16px;
+    }
+
+    /* Additional visual indicator when hovering */
+    .ai-panel-resize-handle::after {
+      content: '';
+      position: absolute;
+      left: -4px;
+      top: 0;
+      width: 16px;
+      height: 100%;
+      background: transparent;
+      cursor: ew-resize;
     }
 
     @keyframes slideInRight {
@@ -1225,11 +1242,41 @@
 
     .ai-quick-actions {
       display: flex;
+      flex-wrap: wrap;
       gap: 8px;
       padding: 10px 12px 10px 16px;
       background: var(--bg-primary);
       border-bottom: 1px solid var(--border-color);
       margin-left: 6px; /* Space for resize divider */
+    }
+
+    .ai-quick-model-selector {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      margin-bottom: 4px;
+    }
+
+    .ai-quick-model-selector label {
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .ai-quick-model-dropdown {
+      flex: 1;
+      padding: 6px 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .ai-quick-model-dropdown:hover {
+      border-color: var(--accent-teal);
     }
 
     .ai-action-btn {
@@ -2922,12 +2969,22 @@
         </div>
       </div>
 
-      <!-- Quick Actions - Direct actions using Perplexity -->
+      <!-- Quick Actions - Direct actions using selected AI model -->
       <div class="ai-quick-actions" id="aiQuickActions">
-        <button class="ai-action-btn" id="aiSummarize" title="Summarize current page with Perplexity">
-          <span>📄</span> Summarize Page
+        <div class="ai-quick-model-selector">
+          <label for="aiQuickModelSelect">Use:</label>
+          <select id="aiQuickModelSelect" class="ai-quick-model-dropdown">
+            <option value="https://www.perplexity.ai/search?q=">🔍 Perplexity</option>
+            <option value="https://gemini.google.com/app?q=">✨ Gemini</option>
+            <option value="https://copilot.microsoft.com/?q=">💠 Copilot</option>
+            <option value="https://www.phind.com/search?q=">👨‍💻 Phind</option>
+            <option value="https://you.com/search?q=">🔎 You.com</option>
+          </select>
+        </div>
+        <button class="ai-action-btn" id="aiSummarize" title="Summarize current page with selected AI">
+          <span>📄</span> Summarize
         </button>
-        <button class="ai-action-btn" id="aiExplainCode" title="Explain code on page with Perplexity">
+        <button class="ai-action-btn" id="aiExplainCode" title="Explain code on page with selected AI">
           <span>💻</span> Explain Code
         </button>
       </div>
@@ -4321,10 +4378,24 @@
       if (closeBtn) closeBtn.addEventListener('click', closeAIPanel);
       if (minimizeBtn) minimizeBtn.addEventListener('click', closeAIPanel);
 
-      // Quick actions - Direct action with reliable AI (Perplexity)
+      // Quick actions - Use selected AI model
+      const quickModelSelect = document.getElementById('aiQuickModelSelect');
+      
+      function getSelectedQuickModel() {
+        const select = document.getElementById('aiQuickModelSelect');
+        if (!select) return { url: 'https://www.perplexity.ai/search?q=', name: 'Perplexity', icon: '🔍' };
+        
+        const url = select.value;
+        const text = select.options[select.selectedIndex].text;
+        const icon = text.split(' ')[0] || '🔍';
+        const name = text.replace(/^[^\s]+\s/, '');
+        return { url, name, icon };
+      }
+      
       if (summarizeBtn) {
         summarizeBtn.addEventListener('click', async () => {
-          showToast('📄 Getting page content...');
+          const model = getSelectedQuickModel();
+          showToast(`📄 Getting page content for ${model.name}...`);
           
           try {
             const pageData = await window.electron.tabs.getPageContent();
@@ -4341,16 +4412,16 @@
               `Summarize this webpage:\n\nTitle: ${pageData.title}\nURL: ${pageData.url}\n\nContent:\n${truncatedContent}`
             );
             
-            // Use Perplexity - reliable, free, no login
-            const aiUrl = `https://www.perplexity.ai/search?q=${query}`;
+            // Use selected AI model
+            const aiUrl = model.url + query;
             
-            console.log('Summarize with Perplexity');
+            console.log(`Summarize with ${model.name}`);
             if (window.electron?.aiPanel) {
               await window.electron.aiPanel.open(aiUrl);
               aiServiceLoaded = true;
-              showAICurrentService('Perplexity', '🔍');
-              if (titleText) titleText.textContent = 'Perplexity';
-              showToast('🔍 Summarizing with Perplexity...');
+              showAICurrentService(model.name, model.icon);
+              if (titleText) titleText.textContent = model.name;
+              showToast(`${model.icon} Summarizing with ${model.name}...`);
             }
           } catch (e) {
             console.error('Summarize error:', e);
@@ -4361,7 +4432,8 @@
 
       if (explainBtn) {
         explainBtn.addEventListener('click', async () => {
-          showToast('💻 Scanning page for code...');
+          const model = getSelectedQuickModel();
+          showToast(`💻 Scanning page for code (using ${model.name})...`);
           
           try {
             const codeData = await window.electron.tabs.getCodeContent();
@@ -4383,16 +4455,16 @@
               `Explain this${lang ? ' ' + lang : ''} code:\n\n\`\`\`${lang}\n${truncatedCode}\n\`\`\``
             );
             
-            // Use Perplexity - reliable for code too
-            const aiUrl = `https://www.perplexity.ai/search?q=${query}`;
+            // Use selected AI model
+            const aiUrl = model.url + query;
             
-            console.log('Explain with Perplexity');
+            console.log(`Explain with ${model.name}`);
             if (window.electron?.aiPanel) {
               await window.electron.aiPanel.open(aiUrl);
               aiServiceLoaded = true;
-              showAICurrentService('Perplexity', '🔍');
-              if (titleText) titleText.textContent = 'Perplexity';
-              showToast(`🔍 Explaining ${source} code...`);
+              showAICurrentService(model.name, model.icon);
+              if (titleText) titleText.textContent = model.name;
+              showToast(`${model.icon} Explaining ${source} code with ${model.name}...`);
             }
           } catch (e) {
             console.error('Explain error:', e);

@@ -493,6 +493,13 @@ class FlashAppAIBrowser {
     if (!tab) return;
 
     const bounds = this.mainWindow.getBounds();
+    
+    // Validate window bounds first
+    if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
+      console.warn('⚠️ Invalid window bounds, skipping updateTabBounds');
+      return;
+    }
+    
     const TOOLBAR_HEIGHT = 120; // Tab bar (44px) + address bar (44px) + bookmark bar (32px)
     
     // Calculate AI panel width responsively based on window width
@@ -500,32 +507,53 @@ class FlashAppAIBrowser {
     if (this.aiPanelOpen) {
       // If manually resized, use that width; otherwise calculate responsive width
       if (this.aiPanelWidth > 0) {
-        aiWidth = this.aiPanelWidth;
+        aiWidth = Math.min(this.aiPanelWidth, bounds.width - 400); // Ensure main content has at least 400px
       } else {
         // Responsive: 30% of window, clamped between 350-600px
-        aiWidth = Math.min(Math.max(350, bounds.width * 0.30), 600);
+        aiWidth = Math.min(Math.max(350, Math.floor(bounds.width * 0.30)), 600);
       }
+      // Ensure minimum panel width
+      aiWidth = Math.max(aiWidth, 300);
     }
 
-    tab.view.setBounds({
-      x: this.sidebarWidth,
-      y: TOOLBAR_HEIGHT,
-      width: bounds.width - this.sidebarWidth - aiWidth,
-      height: bounds.height - TOOLBAR_HEIGHT,
-    });
+    // Calculate main view dimensions with validation
+    const mainViewX = Math.max(0, Math.floor(this.sidebarWidth));
+    const mainViewY = Math.max(0, Math.floor(TOOLBAR_HEIGHT));
+    const mainViewWidth = Math.max(100, Math.floor(bounds.width - this.sidebarWidth - aiWidth));
+    const mainViewHeight = Math.max(100, Math.floor(bounds.height - TOOLBAR_HEIGHT));
+
+    try {
+      tab.view.setBounds({
+        x: mainViewX,
+        y: mainViewY,
+        width: mainViewWidth,
+        height: mainViewHeight,
+      });
+    } catch (e) {
+      console.error('❌ Error setting tab bounds:', e);
+    }
 
     // Update AI panel bounds if open
-    // Calculate header height proportionally (about 15% of panel height, min 120px, max 180px)
-    if (this.aiPanelView && this.aiPanelOpen) {
-      const panelHeight = bounds.height - TOOLBAR_HEIGHT;
-      const AI_PANEL_HEADER_HEIGHT = Math.min(Math.max(120, panelHeight * 0.15), 180);
+    if (this.aiPanelView && this.aiPanelOpen && aiWidth > 0) {
+      const panelHeight = Math.max(200, bounds.height - TOOLBAR_HEIGHT);
+      // Calculate header height proportionally (about 15% of panel height, min 120px, max 180px)
+      const AI_PANEL_HEADER_HEIGHT = Math.min(Math.max(120, Math.floor(panelHeight * 0.15)), 180);
       
-      this.aiPanelView.setBounds({
-        x: bounds.width - aiWidth,
-        y: TOOLBAR_HEIGHT + AI_PANEL_HEADER_HEIGHT,
-        width: aiWidth,
-        height: panelHeight - AI_PANEL_HEADER_HEIGHT,
-      });
+      const aiPanelX = Math.max(0, Math.floor(bounds.width - aiWidth));
+      const aiPanelY = Math.max(0, Math.floor(TOOLBAR_HEIGHT + AI_PANEL_HEADER_HEIGHT));
+      const aiPanelWidth = Math.max(300, Math.floor(aiWidth));
+      const aiPanelHeight = Math.max(100, Math.floor(panelHeight - AI_PANEL_HEADER_HEIGHT));
+
+      try {
+        this.aiPanelView.setBounds({
+          x: aiPanelX,
+          y: aiPanelY,
+          width: aiPanelWidth,
+          height: aiPanelHeight,
+        });
+      } catch (e) {
+        console.error('❌ Error setting AI panel bounds:', e);
+      }
     }
   }
 
