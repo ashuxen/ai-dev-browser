@@ -218,6 +218,7 @@ contextBridge.exposeInMainWorld('electron', {
     reload: () => ipcRenderer.invoke('ai-panel:reload'),
     resize: (width: number) => ipcRenderer.invoke('ai-panel:resize', width),
     status: () => ipcRenderer.invoke('ai-panel:status'),
+    injectContent: (content: string) => ipcRenderer.invoke('ai-panel:inject-content', content),
   },
 
   // AI Service

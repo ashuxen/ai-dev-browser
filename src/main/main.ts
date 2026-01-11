@@ -536,8 +536,13 @@ class FlashAppAIBrowser {
     // Update AI panel bounds if open
     if (this.aiPanelView && this.aiPanelOpen && aiWidth > 0) {
       const panelHeight = Math.max(200, bounds.height - TOOLBAR_HEIGHT);
-      // Calculate header height proportionally (about 15% of panel height, min 120px, max 180px)
-      const AI_PANEL_HEADER_HEIGHT = Math.min(Math.max(120, Math.floor(panelHeight * 0.15)), 180);
+      // AI Panel header components:
+      // - Panel header with title (~48px)
+      // - Current service bar (~44px) 
+      // - Share context bar (~36px)
+      // - Quick actions (when shown) (~44px)
+      // Total: ~172px fixed, but we use a responsive calculation
+      const AI_PANEL_HEADER_HEIGHT = Math.min(Math.max(180, Math.floor(panelHeight * 0.18)), 220);
       
       const aiPanelX = Math.max(0, Math.floor(bounds.width - aiWidth));
       const aiPanelY = Math.max(0, Math.floor(TOOLBAR_HEIGHT + AI_PANEL_HEADER_HEIGHT));
@@ -999,20 +1004,24 @@ class FlashAppAIBrowser {
       }
     });
 
-    // Get selected text from the page (for code explanation)
+    // Get selected text from the page (for code explanation and AI sharing)
     ipcMain.handle('tab:get-selected-text', async () => {
       const tab = this.activeTabId ? this.tabs.get(this.activeTabId) : null;
-      if (!tab) return '';
+      if (!tab) return { text: '', url: '', title: '' };
 
       try {
         const selectedText = await tab.view.webContents.executeJavaScript(`
           window.getSelection().toString();
         `);
         console.log('📝 Selected text:', selectedText?.substring(0, 100) + '...');
-        return selectedText || '';
+        return { 
+          text: selectedText || '',
+          url: tab.url || '',
+          title: tab.title || ''
+        };
       } catch (e) {
         console.error('Failed to get selected text:', e);
-        return '';
+        return { text: '', url: tab?.url || '', title: tab?.title || '' };
       }
     });
 
@@ -1254,6 +1263,74 @@ class FlashAppAIBrowser {
         width: this.aiPanelWidth,
         url: this.aiPanelView?.webContents.getURL() || null
       };
+    });
+
+    // Inject content into AI panel's input field
+    ipcMain.handle('ai-panel:inject-content', async (_e, content: string) => {
+      if (!this.aiPanelView || !this.aiPanelOpen) {
+        return { success: false, error: 'AI panel not open' };
+      }
+      
+      try {
+        // Try to inject content into common AI chat input fields
+        const result = await this.aiPanelView.webContents.executeJavaScript(`
+          (function() {
+            // Common selectors for AI chat input fields
+            const selectors = [
+              // Perplexity
+              'textarea[placeholder*="Ask"]',
+              'textarea[placeholder*="ask"]',
+              // ChatGPT
+              '#prompt-textarea',
+              'textarea[data-id="root"]',
+              // Claude
+              'div[contenteditable="true"]',
+              // Gemini
+              'textarea[aria-label*="Enter"]',
+              'rich-textarea textarea',
+              // Generic
+              'textarea',
+              'input[type="text"]',
+              '[contenteditable="true"]'
+            ];
+            
+            for (const selector of selectors) {
+              const element = document.querySelector(selector);
+              if (element) {
+                // Handle different input types
+                if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
+                  element.focus();
+                  element.value = ${JSON.stringify(content)};
+                  // Trigger input events for React/Vue frameworks
+                  element.dispatchEvent(new Event('input', { bubbles: true }));
+                  element.dispatchEvent(new Event('change', { bubbles: true }));
+                  return { success: true, element: selector };
+                } else if (element.contentEditable === 'true') {
+                  element.focus();
+                  element.textContent = ${JSON.stringify(content)};
+                  element.dispatchEvent(new Event('input', { bubbles: true }));
+                  return { success: true, element: selector };
+                }
+              }
+            }
+            
+            // If no input found, try to copy to clipboard
+            navigator.clipboard.writeText(${JSON.stringify(content)}).then(() => {
+              return { success: false, copied: true };
+            });
+            
+            return { success: false, copied: true };
+          })();
+        `);
+        
+        return result || { success: false, copied: true };
+      } catch (e) {
+        console.error('Failed to inject content into AI panel:', e);
+        // Fallback: copy to clipboard via main process
+        const { clipboard } = require('electron');
+        clipboard.writeText(content);
+        return { success: false, copied: true, error: e.message };
+      }
     });
 
     // Code-server (placeholder)

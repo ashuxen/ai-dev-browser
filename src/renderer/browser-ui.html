@@ -1140,6 +1140,70 @@
       display: flex;
       align-items: center;
       justify-content: center;
+    }
+
+    .ai-share-btn {
+      background: linear-gradient(135deg, var(--accent-teal), var(--accent-purple));
+      color: white;
+    }
+
+    .ai-share-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 2px 8px rgba(0, 217, 255, 0.4);
+    }
+
+    /* Share Context Bar */
+    .ai-share-context-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px 8px 16px;
+      background: linear-gradient(135deg, rgba(0, 217, 255, 0.1), rgba(139, 92, 246, 0.1));
+      border-bottom: 1px solid var(--border-color);
+      margin-left: 8px;
+      gap: 8px;
+    }
+
+    .share-context-info {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .share-icon {
+      font-size: 14px;
+    }
+
+    .share-context-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .share-action-btn {
+      padding: 4px 10px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      color: var(--text-primary);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .share-action-btn:hover {
+      background: var(--accent-teal);
+      color: white;
+      border-color: var(--accent-teal);
+      transform: translateY(-1px);
+    }
+
+    .share-action-btn:active {
+      transform: translateY(0);
+    }
+      justify-content: center;
       transition: var(--transition);
     }
 
@@ -2930,8 +2994,34 @@
           </div>
         </div>
         <div class="ai-panel-actions">
+          <button class="ai-panel-btn ai-share-btn" id="aiSharePage" title="Share page content with AI">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+              <polyline points="16 6 12 2 8 6"/>
+              <line x1="12" y1="2" x2="12" y2="15"/>
+            </svg>
+          </button>
           <button class="ai-panel-btn" id="aiPanelMinimize" title="Minimize">−</button>
           <button class="ai-panel-btn" id="aiPanelClose" title="Close">×</button>
+        </div>
+      </div>
+      
+      <!-- Share Context Bar - Shows when AI is loaded -->
+      <div class="ai-share-context-bar" id="aiShareContextBar" style="display: none;">
+        <div class="share-context-info">
+          <span class="share-icon">📄</span>
+          <span class="share-text">Share browser content with AI:</span>
+        </div>
+        <div class="share-context-actions">
+          <button class="share-action-btn" id="sharePageContent" title="Share full page content">
+            📄 Page
+          </button>
+          <button class="share-action-btn" id="shareSelectedText" title="Share selected text">
+            ✂️ Selection
+          </button>
+          <button class="share-action-btn" id="sharePageUrl" title="Share URL only">
+            🔗 URL
+          </button>
         </div>
       </div>
       
@@ -4213,11 +4303,8 @@
       
       aiPanelIsOpen = true;
       
-      // Close other sidebars
-      if (bookmarksSidebar) bookmarksSidebar.classList.remove('open');
-      if (historySidebar) historySidebar.classList.remove('open');
-      if (bookmarkBtn) bookmarkBtn.classList.remove('active');
-      if (historyBtn) historyBtn.classList.remove('active');
+      // Don't close sidebars - allow AI panel and sidebars to coexist
+      // User can have bookmarks or history open while using AI assistant
       
       // Reset dropdown
       if (select) select.selectedIndex = 0;
@@ -4272,11 +4359,13 @@
       const currentBar = document.getElementById('aiCurrentService');
       const quickActions = document.querySelector('.ai-quick-actions');
       const infoArea = document.getElementById('aiWebviewInfo');
+      const shareBar = document.getElementById('aiShareContextBar');
       
       if (selector) selector.style.display = 'flex';
       if (currentBar) currentBar.style.display = 'none';
       if (quickActions) quickActions.style.display = 'flex';
       if (infoArea) infoArea.style.display = 'block';
+      if (shareBar) shareBar.style.display = 'none';
       
       // Reset dropdown
       const select = document.getElementById('aiServiceSelect');
@@ -4288,6 +4377,7 @@
       const currentBar = document.getElementById('aiCurrentService');
       const quickActions = document.querySelector('.ai-quick-actions');
       const infoArea = document.getElementById('aiWebviewInfo');
+      const shareBar = document.getElementById('aiShareContextBar');
       const nameEl = document.getElementById('aiCurrentName');
       const iconEl = document.getElementById('aiCurrentIcon');
       
@@ -4295,8 +4385,42 @@
       if (currentBar) currentBar.style.display = 'flex';
       if (quickActions) quickActions.style.display = 'none';
       if (infoArea) infoArea.style.display = 'none';
+      if (shareBar) shareBar.style.display = 'flex'; // Show share bar when AI is loaded
       if (nameEl) nameEl.textContent = serviceName;
       if (iconEl) iconEl.textContent = serviceIcon;
+    }
+    
+    // Store current AI service URL for content injection
+    let currentAIServiceUrl = '';
+    
+    // Function to share content with AI by injecting into the AI panel
+    async function shareContentWithAI(content, type = 'page') {
+      if (!aiServiceLoaded || !window.electron?.aiPanel) {
+        showToast('⚠️ Please select an AI service first');
+        return;
+      }
+      
+      try {
+        // Inject the content into the AI panel's input field
+        const result = await window.electron.aiPanel.injectContent(content);
+        
+        if (result.success) {
+          showToast(`✅ ${type} content shared with AI`);
+        } else if (result.copied) {
+          showToast(`📋 Content copied! Paste it in the AI chat (Ctrl/Cmd+V)`);
+        } else {
+          showToast('⚠️ Could not inject content. Try copying manually.');
+        }
+      } catch (e) {
+        console.error('Share content error:', e);
+        // Fallback: copy to clipboard
+        try {
+          await navigator.clipboard.writeText(content);
+          showToast('📋 Content copied to clipboard! Paste it in the AI chat.');
+        } catch (clipErr) {
+          showToast('❌ Failed to share content');
+        }
+      }
     }
 
     function setupAIPanel() {
@@ -4377,6 +4501,86 @@
       // Close buttons
       if (closeBtn) closeBtn.addEventListener('click', closeAIPanel);
       if (minimizeBtn) minimizeBtn.addEventListener('click', closeAIPanel);
+
+      // Share buttons - Share browser content with AI
+      const sharePageBtn = document.getElementById('sharePageContent');
+      const shareSelectionBtn = document.getElementById('shareSelectedText');
+      const shareUrlBtn = document.getElementById('sharePageUrl');
+      const shareMainBtn = document.getElementById('aiSharePage');
+      
+      // Share full page content
+      if (sharePageBtn) {
+        sharePageBtn.addEventListener('click', async () => {
+          showToast('📄 Getting page content...');
+          try {
+            const pageData = await window.electron.tabs.getPageContent();
+            if (!pageData || !pageData.content) {
+              showToast('❌ Could not extract page content');
+              return;
+            }
+            
+            const content = `Please analyze this webpage:\n\n**Title:** ${pageData.title}\n**URL:** ${pageData.url}\n\n**Content:**\n${pageData.content.substring(0, 3000)}${pageData.content.length > 3000 ? '...(truncated)' : ''}`;
+            await shareContentWithAI(content, 'Page');
+          } catch (e) {
+            console.error('Share page error:', e);
+            showToast('❌ Failed to get page content');
+          }
+        });
+      }
+      
+      // Share selected text
+      if (shareSelectionBtn) {
+        shareSelectionBtn.addEventListener('click', async () => {
+          showToast('✂️ Getting selected text...');
+          try {
+            const selection = await window.electron.tabs.getSelectedText();
+            if (!selection || !selection.text || selection.text.trim().length === 0) {
+              showToast('⚠️ No text selected. Select some text on the page first.');
+              return;
+            }
+            
+            const content = `Please analyze this selected text from the webpage:\n\n**From:** ${selection.url}\n\n**Selected Text:**\n${selection.text}`;
+            await shareContentWithAI(content, 'Selection');
+          } catch (e) {
+            console.error('Share selection error:', e);
+            showToast('❌ Failed to get selected text');
+          }
+        });
+      }
+      
+      // Share URL only
+      if (shareUrlBtn) {
+        shareUrlBtn.addEventListener('click', async () => {
+          try {
+            const pageData = await window.electron.tabs.getPageContent();
+            if (!pageData) {
+              showToast('❌ Could not get page info');
+              return;
+            }
+            
+            const content = `Please tell me about this webpage:\n\n**Title:** ${pageData.title}\n**URL:** ${pageData.url}`;
+            await shareContentWithAI(content, 'URL');
+          } catch (e) {
+            console.error('Share URL error:', e);
+            showToast('❌ Failed to get page URL');
+          }
+        });
+      }
+      
+      // Main share button in header - shows a menu or shares page
+      if (shareMainBtn) {
+        shareMainBtn.addEventListener('click', async () => {
+          if (!aiServiceLoaded) {
+            showToast('⚠️ Please select an AI service first');
+            return;
+          }
+          // Toggle share bar visibility or share page content
+          const shareBar = document.getElementById('aiShareContextBar');
+          if (shareBar) {
+            shareBar.style.display = shareBar.style.display === 'none' ? 'flex' : 'none';
+          }
+        });
+      }
 
       // Quick actions - Use selected AI model
       const quickModelSelect = document.getElementById('aiQuickModelSelect');
@@ -5352,10 +5556,8 @@
       const isOpen = bookmarksSidebar.classList.contains('open') || 
                      historySidebar.classList.contains('open');
       if (window.electron) {
-        // Don't update if AI panel is handling the width
-        if (!aiPanel.classList.contains('open')) {
-          window.electron.tabs.navigate('__sidebar:' + (isOpen ? '320' : '0'));
-        }
+        // Always update sidebar width - AI panel width is handled separately
+        window.electron.tabs.navigate('__sidebar:' + (isOpen ? '320' : '0'));
       }
     }
 
