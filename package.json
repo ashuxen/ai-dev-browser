@@ -1,7 +1,7 @@
 {
   "name": "flashappai-browser",
   "productName": "FlashAppAI Browser",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "description": "AI-powered browser for developers working with cloud-based code editors",
   "main": ".vite/build/main.js",
   "author": {

@@ -2240,6 +2240,44 @@ class FlashAppAIBrowser {
           { role: 'zoom' },
         ],
       },
+      {
+        label: 'Help',
+        submenu: [
+          {
+            label: 'Help & Documentation',
+            accelerator: 'F1',
+            click: () => {
+              shell.openExternal('https://github.com/AshwiniParaye1/ai-dev-browser#readme');
+            },
+          },
+          {
+            label: 'Report an Issue',
+            click: () => {
+              shell.openExternal('https://github.com/AshwiniParaye1/ai-dev-browser/issues');
+            },
+          },
+          { type: 'separator' },
+          {
+            label: 'Check for Updates...',
+            click: () => {
+              shell.openExternal('https://github.com/AshwiniParaye1/ai-dev-browser/releases/latest');
+            },
+          },
+          { type: 'separator' },
+          {
+            label: 'About FlashAppAI Browser',
+            click: () => {
+              dialog.showMessageBox(this.mainWindow!, {
+                type: 'info',
+                title: 'About FlashAppAI Browser',
+                message: 'FlashAppAI Browser',
+                detail: `Version: ${app.getVersion()}\n\nA privacy-focused AI-powered browser for developers.\n\nFeatures:\n• Built-in AI Assistant\n• Ad & Tracker Blocking\n• Anti-fingerprinting\n• Phantom Mode (Private Browsing)\n\n© 2024-2026 FlashAppAI`,
+                buttons: ['OK'],
+              });
+            },
+          },
+        ],
+      },
     ];
 
     Menu.setApplicationMenu(Menu.buildFromTemplate(template));
