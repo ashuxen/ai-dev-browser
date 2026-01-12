@@ -273,8 +273,18 @@ class FlashAppAIBrowser {
     console.log('✅ Main window created');
   }
 
+  // Maximum number of tabs allowed
+  private maxTabs = 20;
+  
   private createTab(url?: string): string {
     if (!this.mainWindow) return '';
+    
+    // Check tab limit to prevent memory issues
+    if (this.tabs.size >= this.maxTabs) {
+      console.warn(`⚠️ Maximum tabs (${this.maxTabs}) reached`);
+      this.mainWindow.webContents.send('show-toast', `Maximum ${this.maxTabs} tabs allowed`);
+      return '';
+    }
     
     // If no URL provided, use the new tab page setting (default: blank)
     const tabUrl = url || this.getSetting('newTabPage') || 'about:blank';
@@ -287,9 +297,14 @@ class FlashAppAIBrowser {
         nodeIntegration: false,
         contextIsolation: true,
         // Performance optimizations
-        backgroundThrottling: false, // Keep page responsive when in background
+        backgroundThrottling: true, // Throttle background tabs to save resources
         enableBlinkFeatures: 'CSSContainerQueries', // Modern CSS features
-        spellcheck: false, // Disable for performance (can be toggled)
+        spellcheck: false, // Disable for performance
+        // Hardware acceleration
+        webgl: true,
+        experimentalFeatures: false, // Disable experimental features for stability
+        // Memory optimizations
+        v8CacheOptions: 'code', // Cache compiled code
       },
     });
 
@@ -466,11 +481,22 @@ class FlashAppAIBrowser {
       }
     }
 
-    if (this.activeTabId === tabId) {
+    // Remove from window first
+    try {
       this.mainWindow.removeBrowserView(tab.view);
+    } catch (e) {
+      // Ignore if already removed
     }
 
-    (tab.view.webContents as any).destroy?.();
+    // Properly destroy the view to free memory
+    try {
+      if (tab.view.webContents && !tab.view.webContents.isDestroyed()) {
+        tab.view.webContents.close();
+      }
+    } catch (e) {
+      console.warn('Error closing tab webContents:', e);
+    }
+    
     this.tabs.delete(tabId);
 
     // Switch to another tab or create new one
@@ -486,7 +512,22 @@ class FlashAppAIBrowser {
     this.notifyTabUpdate();
   }
 
+  // Debounce timer for bounds updates
+  private boundsUpdateTimer: NodeJS.Timeout | null = null;
+  
   private updateTabBounds() {
+    // Debounce bounds updates
+    if (this.boundsUpdateTimer) {
+      clearTimeout(this.boundsUpdateTimer);
+    }
+    
+    this.boundsUpdateTimer = setTimeout(() => {
+      this.boundsUpdateTimer = null;
+      this.doUpdateTabBounds();
+    }, 16); // ~60fps
+  }
+  
+  private doUpdateTabBounds() {
     if (!this.mainWindow || !this.activeTabId) return;
 
     const tab = this.tabs.get(this.activeTabId);
@@ -743,7 +784,24 @@ class FlashAppAIBrowser {
     return phantomWindow;
   }
 
+  // Debounce timer for tab updates
+  private tabUpdateTimer: NodeJS.Timeout | null = null;
+  
   private notifyTabUpdate() {
+    if (!this.mainWindow) return;
+
+    // Debounce updates to prevent excessive IPC calls
+    if (this.tabUpdateTimer) {
+      clearTimeout(this.tabUpdateTimer);
+    }
+    
+    this.tabUpdateTimer = setTimeout(() => {
+      this.tabUpdateTimer = null;
+      this.sendTabUpdate();
+    }, 50); // 50ms debounce
+  }
+  
+  private sendTabUpdate() {
     if (!this.mainWindow) return;
 
     const tabsData = Array.from(this.tabs.values()).map(t => {

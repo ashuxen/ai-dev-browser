@@ -5762,20 +5762,33 @@
         console.log('🎬 Fullscreen change:', isFullscreen);
         const toolbar = document.querySelector('.toolbar');
         const tabBar = document.querySelector('.tab-bar');
+        const bookmarkBar = document.getElementById('bookmarkBar');
+        const header = document.querySelector('.header');
         const mainContent = document.querySelector('.main-content');
         
         if (isFullscreen) {
-          // Hide all browser UI for true fullscreen video
+          // Hide ALL browser UI for true fullscreen video
+          if (header) header.style.display = 'none';
           if (toolbar) toolbar.style.display = 'none';
           if (tabBar) tabBar.style.display = 'none';
+          if (bookmarkBar) bookmarkBar.style.display = 'none';
           if (mainContent) mainContent.style.marginTop = '0';
           document.body.style.overflow = 'hidden';
+          
+          // Close any open sidebars
+          document.querySelectorAll('.sidebar').forEach(s => s.style.display = 'none');
+          
+          console.log('🎬 All browser UI hidden for fullscreen');
         } else {
           // Restore browser UI
+          if (header) header.style.display = '';
           if (toolbar) toolbar.style.display = '';
           if (tabBar) tabBar.style.display = '';
+          if (bookmarkBar) bookmarkBar.style.display = '';
           if (mainContent) mainContent.style.marginTop = '';
           document.body.style.overflow = '';
+          
+          console.log('🎬 Browser UI restored from fullscreen');
         }
       });
     }
