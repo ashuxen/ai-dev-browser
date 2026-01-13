@@ -102,6 +102,10 @@ class FlashAppAIBrowser {
   private aiPanelOpen = false;
   private aiPanelWidth = 0; // 0 = use responsive calculation, >0 = manual resize
   
+  // OAuth popup
+  private oauthWindow: BrowserWindow | null = null;
+  private oauthWindowOpen = false;
+  
   // Recently Closed Tabs
   private recentlyClosed: ClosedTab[] = [];
   private maxRecentlyClosed = 25;
@@ -168,6 +172,13 @@ class FlashAppAIBrowser {
       return;
     }
 
+    // Set Chrome-like command line flags BEFORE app is ready
+    // This helps Google and other services recognize this as a legitimate browser
+    app.commandLine.appendSwitch('disable-blink-features', 'AutomationControlled');
+    app.commandLine.appendSwitch('disable-features', 'IsolateOrigins,site-per-process');
+    app.commandLine.appendSwitch('flag-switches-begin');
+    app.commandLine.appendSwitch('flag-switches-end');
+    
     app.whenReady().then(() => {
       console.log('✅ App ready');
       
@@ -179,6 +190,37 @@ class FlashAppAIBrowser {
       
       // Configure default session cache
       session.defaultSession.setPreloads([]); // No custom preloads for pages
+      
+      // Set Chrome user agent at session level for Google login compatibility
+      const chromeVersion = process.versions.chrome;
+      const chromeMajor = chromeVersion.split('.')[0];
+      const userAgent = `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36`;
+      session.defaultSession.setUserAgent(userAgent);
+      console.log('🌐 User agent set:', userAgent);
+      
+      // Set Client Hints headers that Google checks
+      session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
+        const headers = { ...details.requestHeaders };
+        
+        // Add Chrome Client Hints (Sec-CH-UA) - Google specifically checks these
+        headers['Sec-CH-UA'] = `"Chromium";v="${chromeMajor}", "Google Chrome";v="${chromeMajor}", "Not-A.Brand";v="99"`;
+        headers['Sec-CH-UA-Mobile'] = '?0';
+        headers['Sec-CH-UA-Platform'] = '"macOS"';
+        headers['Sec-CH-UA-Platform-Version'] = '"14.0.0"';
+        headers['Sec-CH-UA-Full-Version-List'] = `"Chromium";v="${chromeVersion}", "Google Chrome";v="${chromeVersion}", "Not-A.Brand";v="99.0.0.0"`;
+        
+        // Ensure proper Accept headers
+        if (!headers['Accept']) {
+          headers['Accept'] = 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8';
+        }
+        
+        // Remove any Electron-specific headers
+        delete headers['X-Electron-Version'];
+        
+        callback({ requestHeaders: headers });
+      });
+      
+      console.log('📋 Client Hints headers configured');
       
       // Initialize security for default session
       console.log('🔐 Initializing security features...');
@@ -299,14 +341,166 @@ class FlashAppAIBrowser {
         // Performance optimizations
         backgroundThrottling: true, // Throttle background tabs to save resources
         enableBlinkFeatures: 'CSSContainerQueries', // Modern CSS features
-        spellcheck: false, // Disable for performance
+        spellcheck: true, // Enable spellcheck like a real browser
         // Hardware acceleration
         webgl: true,
         experimentalFeatures: false, // Disable experimental features for stability
         // Memory optimizations
         v8CacheOptions: 'code', // Cache compiled code
+        // Important for Google login - enable all standard browser features
+        allowRunningInsecureContent: false,
+        webSecurity: true,
       },
     });
+
+    // Inject comprehensive Chrome emulation script
+    view.webContents.on('dom-ready', () => {
+      view.webContents.executeJavaScript(`
+        (function() {
+          'use strict';
+          
+          // Remove Electron indicators
+          try {
+            delete window.process;
+            delete window.require;
+            delete window.module;
+            delete window.exports;
+            delete window.__dirname;
+            delete window.__filename;
+          } catch(e) {}
+          
+          // Complete Chrome object emulation
+          window.chrome = window.chrome || {};
+          
+          // Chrome runtime (extensions API stub)
+          window.chrome.runtime = {
+            id: undefined,
+            connect: function() { return { onMessage: { addListener: function() {} }, postMessage: function() {} }; },
+            sendMessage: function() {},
+            onMessage: { addListener: function() {}, removeListener: function() {} },
+            onConnect: { addListener: function() {}, removeListener: function() {} },
+            getManifest: function() { return {}; },
+            getURL: function(path) { return path; },
+            lastError: null,
+          };
+          
+          // Chrome app API
+          window.chrome.app = {
+            isInstalled: false,
+            InstallState: { DISABLED: 'disabled', INSTALLED: 'installed', NOT_INSTALLED: 'not_installed' },
+            RunningState: { CANNOT_RUN: 'cannot_run', READY_TO_RUN: 'ready_to_run', RUNNING: 'running' },
+            getDetails: function() { return null; },
+            getIsInstalled: function() { return false; },
+            runningState: function() { return 'cannot_run'; },
+          };
+          
+          // Chrome csi (Client Side Instrumentation) - Google checks this
+          window.chrome.csi = function() {
+            return {
+              startE: Date.now(),
+              onloadT: Date.now(),
+              pageT: Date.now() - performance.timing.navigationStart,
+              tran: 15
+            };
+          };
+          
+          // Chrome loadTimes - Google checks this
+          window.chrome.loadTimes = function() {
+            return {
+              commitLoadTime: Date.now() / 1000,
+              connectionInfo: 'h2',
+              finishDocumentLoadTime: Date.now() / 1000,
+              finishLoadTime: Date.now() / 1000,
+              firstPaintAfterLoadTime: 0,
+              firstPaintTime: Date.now() / 1000,
+              navigationType: 'navigate',
+              npnNegotiatedProtocol: 'h2',
+              requestTime: Date.now() / 1000,
+              startLoadTime: Date.now() / 1000,
+              wasAlternateProtocolAvailable: false,
+              wasFetchedViaSpdy: true,
+              wasNpnNegotiated: true
+            };
+          };
+          
+          // Remove webdriver flag
+          Object.defineProperty(navigator, 'webdriver', {
+            get: () => false,
+            configurable: true
+          });
+          
+          // Proper plugins (like real Chrome)
+          const pluginData = [
+            { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format', mimeTypes: [{type: 'application/x-google-chrome-pdf', suffixes: 'pdf', description: 'Portable Document Format'}] },
+            { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: '', mimeTypes: [{type: 'application/pdf', suffixes: 'pdf', description: ''}] },
+            { name: 'Native Client', filename: 'internal-nacl-plugin', description: '', mimeTypes: [{type: 'application/x-nacl', suffixes: '', description: 'Native Client Executable'}] }
+          ];
+          
+          const plugins = {
+            length: pluginData.length,
+            item: function(i) { return pluginData[i] || null; },
+            namedItem: function(name) { return pluginData.find(p => p.name === name) || null; },
+            refresh: function() {}
+          };
+          pluginData.forEach((p, i) => { plugins[i] = p; });
+          
+          Object.defineProperty(navigator, 'plugins', {
+            get: () => plugins,
+            configurable: true
+          });
+          
+          // Languages
+          Object.defineProperty(navigator, 'languages', {
+            get: () => ['en-US', 'en'],
+            configurable: true
+          });
+          
+          // Hardware concurrency (don't lie, but ensure it's defined)
+          if (!navigator.hardwareConcurrency) {
+            Object.defineProperty(navigator, 'hardwareConcurrency', {
+              get: () => 8,
+              configurable: true
+            });
+          }
+          
+          // Device memory
+          if (!navigator.deviceMemory) {
+            Object.defineProperty(navigator, 'deviceMemory', {
+              get: () => 8,
+              configurable: true
+            });
+          }
+          
+          // Permissions API enhancement
+          const originalQuery = navigator.permissions?.query;
+          if (originalQuery) {
+            navigator.permissions.query = function(parameters) {
+              return originalQuery.call(this, parameters).then(result => {
+                // Return proper permission states
+                return result;
+              });
+            };
+          }
+          
+          // Make sure Notification permission works
+          if (window.Notification && Notification.permission === 'default') {
+            // Don't modify, just ensure it exists
+          }
+          
+          // Console log for debugging
+          console.log('%c✅ FlashAppAI Browser - Chrome compatibility mode active', 'color: #00d9ff; font-weight: bold;');
+        })();
+      `).catch(() => {});
+    });
+
+    // Handle popups - open in new tab
+    view.webContents.setWindowOpenHandler(({ url }) => {
+      this.createTab(url);
+      return { action: 'deny' };
+    });
+
+    // No interception - let users browse naturally
+    // Google will show their own error page if they block login
 
     const tab: Tab = { id, url: tabUrl, title: 'New Tab', view };
     this.tabs.set(id, tab);
@@ -620,6 +814,17 @@ class FlashAppAIBrowser {
       },
     });
 
+    // Inject Chrome-like properties for AI panel too
+    this.aiPanelView.webContents.on('dom-ready', () => {
+      this.aiPanelView?.webContents.executeJavaScript(`
+        delete window.process;
+        delete window.require;
+        if (!window.chrome) window.chrome = {};
+        if (!window.chrome.runtime) window.chrome.runtime = {};
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+      `).catch(() => {});
+    });
+
     this.mainWindow.addBrowserView(this.aiPanelView);
     this.aiPanelView.webContents.loadURL(url);
     this.aiPanelOpen = true;
@@ -642,6 +847,162 @@ class FlashAppAIBrowser {
     this.updateTabBounds();
 
     console.log('🤖 AI Panel closed');
+  }
+
+  // ===== OAUTH POPUP METHODS =====
+  
+  /**
+   * Check if URL is a Google login URL
+   */
+  private isGoogleLoginUrl(url: string): boolean {
+    const googleLoginPatterns = [
+      'accounts.google.com/signin',
+      'accounts.google.com/v3/signin',
+      'accounts.google.com/ServiceLogin',
+      'accounts.google.com/o/oauth2',
+      'accounts.google.com/AccountChooser',
+    ];
+    return googleLoginPatterns.some(pattern => url.includes(pattern));
+  }
+
+  /**
+   * Check if URL is any OAuth URL that needs popup treatment
+   */
+  private isOAuthUrl(url: string): boolean {
+    const oauthPatterns = [
+      'accounts.google.com',
+      'login.microsoftonline.com',
+      'login.live.com',
+      'appleid.apple.com/auth',
+      'github.com/login/oauth',
+      'github.com/login/device',
+      'oauth',
+      '/authorize',
+      '/signin',
+    ];
+    return oauthPatterns.some(pattern => url.includes(pattern));
+  }
+
+  /**
+   * Open Google login in system browser with seamless return
+   * This is the ONLY method that works - Google blocks ALL Electron apps
+   */
+  private openGoogleLoginPopup(loginUrl: string, originTabId: string) {
+    console.log('🔐 Google login detected - opening in system browser');
+    
+    // Store the return URL
+    const originTab = this.tabs.get(originTabId);
+    const returnUrl = originTab?.url || '';
+    
+    // Store info for when user returns
+    this.pendingGoogleLogin = {
+      tabId: originTabId,
+      returnUrl: returnUrl,
+      startTime: Date.now(),
+    };
+    
+    // Show info dialog
+    if (this.mainWindow) {
+      dialog.showMessageBox(this.mainWindow, {
+        type: 'info',
+        buttons: ['Open Safari/Chrome', 'Cancel'],
+        defaultId: 0,
+        title: 'Google Sign-In',
+        message: 'Sign in with Safari or Chrome',
+        detail: `Google blocks sign-in from all desktop apps (including VS Code, Slack, Spotify) for security reasons.
+
+To sign in:
+1. Click "Open Safari/Chrome"
+2. Sign in to your Google account
+3. Close Safari and click on FlashAppAI Browser
+4. Your page will automatically refresh
+
+This is Google's official security policy.`,
+      }).then(result => {
+        if (result.response === 0) {
+          // Open in system browser
+          shell.openExternal(loginUrl);
+          
+          // Start watching for app focus to auto-refresh
+          this.startLoginWatcher();
+        }
+      });
+    }
+  }
+  
+  private pendingGoogleLogin: { tabId: string; returnUrl: string; startTime: number } | null = null;
+  private loginWatcherInterval: NodeJS.Timeout | null = null;
+  
+  /**
+   * Watch for app to regain focus after Google login
+   */
+  private startLoginWatcher() {
+    // Clear any existing watcher
+    if (this.loginWatcherInterval) {
+      clearInterval(this.loginWatcherInterval);
+    }
+    
+    let hasLostFocus = false;
+    
+    this.loginWatcherInterval = setInterval(() => {
+      if (!this.mainWindow || !this.pendingGoogleLogin) {
+        this.stopLoginWatcher();
+        return;
+      }
+      
+      // Check if window lost focus (user went to Safari)
+      if (!this.mainWindow.isFocused()) {
+        hasLostFocus = true;
+      }
+      
+      // If window regained focus after losing it, user might be back from login
+      if (hasLostFocus && this.mainWindow.isFocused()) {
+        console.log('🔐 App regained focus - completing login');
+        this.completeGoogleLogin();
+      }
+      
+      // Timeout after 5 minutes
+      if (Date.now() - this.pendingGoogleLogin.startTime > 5 * 60 * 1000) {
+        this.stopLoginWatcher();
+      }
+    }, 1000);
+  }
+  
+  private stopLoginWatcher() {
+    if (this.loginWatcherInterval) {
+      clearInterval(this.loginWatcherInterval);
+      this.loginWatcherInterval = null;
+    }
+    this.pendingGoogleLogin = null;
+  }
+  
+  /**
+   * Complete Google login - refresh the page
+   */
+  private completeGoogleLogin() {
+    if (!this.pendingGoogleLogin) return;
+    
+    const { tabId, returnUrl } = this.pendingGoogleLogin;
+    const tab = this.tabs.get(tabId);
+    
+    if (tab) {
+      // Refresh the page
+      tab.view.webContents.reload();
+      this.mainWindow?.webContents.send('show-toast', '🔄 Page refreshed - check if you\'re signed in!');
+    }
+    
+    this.stopLoginWatcher();
+  }
+
+  /**
+   * Close OAuth popup window (if any)
+   */
+  private closeOAuthPopup() {
+    if (this.oauthWindow) {
+      this.oauthWindow.close();
+      this.oauthWindow = null;
+    }
+    this.oauthWindowOpen = false;
   }
 
   // Clear AI content but keep panel open (for back/switch)

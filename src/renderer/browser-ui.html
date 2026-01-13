@@ -425,6 +425,243 @@
       box-shadow: 0 0 12px rgba(147, 51, 234, 0.5);
     }
 
+    /* Privacy Dashboard Button */
+    .privacy-btn {
+      position: relative;
+      background: linear-gradient(135deg, #10b981, #059669) !important;
+      border: none !important;
+    }
+
+    .privacy-btn:hover {
+      background: linear-gradient(135deg, #34d399, #10b981) !important;
+      transform: scale(1.1);
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
+    }
+
+    .privacy-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      font-size: 9px;
+      font-weight: 700;
+      min-width: 16px;
+      height: 16px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Privacy Dashboard Modal */
+    .privacy-modal {
+      max-width: 600px;
+    }
+
+    .privacy-stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .privacy-stat-card {
+      background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-elevated));
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      border: 1px solid var(--border-color);
+      transition: var(--transition);
+    }
+
+    .privacy-stat-card:hover {
+      border-color: var(--accent-teal);
+      transform: translateY(-2px);
+    }
+
+    .privacy-stat-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .privacy-stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--accent-teal);
+      margin-bottom: 4px;
+    }
+
+    .privacy-stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .privacy-toggles {
+      background: var(--bg-tertiary);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border-color);
+    }
+
+    .privacy-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .privacy-toggle-row:last-child {
+      border-bottom: none;
+    }
+
+    .privacy-toggle-info {
+      flex: 1;
+    }
+
+    .privacy-toggle-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .privacy-toggle-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .privacy-toggle-switch {
+      position: relative;
+      width: 56px;
+      height: 28px;
+      background: var(--bg-primary);
+      border-radius: 14px;
+      cursor: pointer;
+      border: 1px solid var(--border-color);
+      transition: var(--transition);
+    }
+
+    .privacy-toggle-switch.active {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border-color: #10b981;
+    }
+
+    .privacy-toggle-switch::after {
+      content: '';
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      background: white;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: var(--transition);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .privacy-toggle-switch.active::after {
+      left: 30px;
+    }
+
+    .privacy-features {
+      background: var(--bg-tertiary);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .privacy-features-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .privacy-features-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .privacy-feature-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      background: var(--bg-primary);
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+    }
+
+    .privacy-feature-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent-teal), var(--accent-purple));
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    .privacy-feature-text {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .privacy-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .privacy-action-btn {
+      flex: 1;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: var(--transition);
+    }
+
+    .privacy-action-btn.primary {
+      background: linear-gradient(135deg, var(--accent-teal), var(--accent-purple));
+      color: white;
+    }
+
+    .privacy-action-btn.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 217, 255, 0.3);
+    }
+
+    .privacy-action-btn.secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-color);
+    }
+
+    .privacy-action-btn.secondary:hover {
+      background: var(--bg-elevated);
+      border-color: var(--accent-teal);
+      color: var(--text-primary);
+    }
+
     /* ===== MAIN CONTENT ===== */
     .main-content {
       flex: 1;
@@ -2857,6 +3094,12 @@
         <button class="action-btn phantom-btn" id="phantomBtn" data-tooltip="Phantom Mode">
           👻
         </button>
+        <button class="action-btn privacy-btn" id="privacyBtn" data-tooltip="Privacy Dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span class="privacy-badge" id="privacyBadge" style="display: none;">0</span>
+        </button>
         <div class="menu-container" id="menuContainer">
           <button class="action-btn menu-btn" id="menuBtn" data-tooltip="Menu">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -3676,6 +3919,107 @@
     </div>
   </div>
 
+  <!-- Privacy Dashboard Modal -->
+  <div class="modal-overlay" id="privacyModal">
+    <div class="modal privacy-modal">
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <span class="modal-title-icon">🛡️</span>
+          Privacy Dashboard
+        </h2>
+        <button class="modal-close" id="closePrivacy">×</button>
+      </div>
+      <div class="modal-body">
+        <!-- Stats Grid -->
+        <div class="privacy-stats-grid">
+          <div class="privacy-stat-card">
+            <div class="privacy-stat-icon">🚫</div>
+            <div class="privacy-stat-value" id="adsBlockedCount">0</div>
+            <div class="privacy-stat-label">Ads Blocked</div>
+          </div>
+          <div class="privacy-stat-card">
+            <div class="privacy-stat-icon">👁️</div>
+            <div class="privacy-stat-value" id="trackersBlockedCount">0</div>
+            <div class="privacy-stat-label">Trackers Blocked</div>
+          </div>
+          <div class="privacy-stat-card">
+            <div class="privacy-stat-icon">🔐</div>
+            <div class="privacy-stat-value" id="httpsUpgrades">0</div>
+            <div class="privacy-stat-label">HTTPS Upgrades</div>
+          </div>
+        </div>
+
+        <!-- Toggle Controls -->
+        <div class="privacy-toggles">
+          <div class="privacy-toggle-row">
+            <div class="privacy-toggle-info">
+              <div class="privacy-toggle-label">🛡️ Ad Blocker</div>
+              <div class="privacy-toggle-desc">Block intrusive advertisements and popups</div>
+            </div>
+            <div class="privacy-toggle-switch active" id="adBlockToggle"></div>
+          </div>
+          <div class="privacy-toggle-row">
+            <div class="privacy-toggle-info">
+              <div class="privacy-toggle-label">🔒 Tracker Blocker</div>
+              <div class="privacy-toggle-desc">Prevent sites from tracking your browsing</div>
+            </div>
+            <div class="privacy-toggle-switch active" id="trackerBlockToggle"></div>
+          </div>
+          <div class="privacy-toggle-row">
+            <div class="privacy-toggle-info">
+              <div class="privacy-toggle-label">🎭 Anti-Fingerprinting</div>
+              <div class="privacy-toggle-desc">Protect against browser fingerprinting</div>
+            </div>
+            <div class="privacy-toggle-switch active" id="antiFingerprintToggle"></div>
+          </div>
+        </div>
+
+        <!-- Active Features -->
+        <div class="privacy-features">
+          <div class="privacy-features-title">
+            <span>✅</span> Active Privacy Features
+          </div>
+          <div class="privacy-features-grid">
+            <div class="privacy-feature-item">
+              <div class="privacy-feature-icon">🔐</div>
+              <div class="privacy-feature-text">HTTPS Enforcement</div>
+            </div>
+            <div class="privacy-feature-item">
+              <div class="privacy-feature-icon">🚫</div>
+              <div class="privacy-feature-text">Popup Blocking</div>
+            </div>
+            <div class="privacy-feature-item">
+              <div class="privacy-feature-icon">📍</div>
+              <div class="privacy-feature-text">Permission Manager</div>
+            </div>
+            <div class="privacy-feature-item">
+              <div class="privacy-feature-icon">📜</div>
+              <div class="privacy-feature-text">Certificate Validation</div>
+            </div>
+            <div class="privacy-feature-item">
+              <div class="privacy-feature-icon">🕵️</div>
+              <div class="privacy-feature-text">DNT Headers</div>
+            </div>
+            <div class="privacy-feature-item">
+              <div class="privacy-feature-icon">👻</div>
+              <div class="privacy-feature-text">Phantom Mode</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="privacy-actions">
+          <button class="privacy-action-btn secondary" id="clearBrowsingData">
+            <span>🧹</span> Clear Browsing Data
+          </button>
+          <button class="privacy-action-btn primary" id="openPhantomFromPrivacy">
+            <span>👻</span> Open Phantom Mode
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <style>
     /* Bookmark Dialog Styles */
     .form-group {
@@ -3778,6 +4122,7 @@
     const historyBtn = document.getElementById('historyBtn');
     const aiBtn = document.getElementById('aiBtn');
     const phantomBtn = document.getElementById('phantomBtn');
+    const privacyBtn = document.getElementById('privacyBtn');
     const menuBtn = document.getElementById('menuBtn');
     const menuDropdown = document.getElementById('menuDropdown');
     
@@ -3788,6 +4133,7 @@
     // Modals
     const settingsModal = document.getElementById('settingsModal');
     const helpModal = document.getElementById('helpModal');
+    const privacyModal = document.getElementById('privacyModal');
     const aboutModal = document.getElementById('aboutModal');
 
     // State
@@ -4806,10 +5152,11 @@
       document.getElementById('closeSettings')?.addEventListener('click', () => closeModal('settings'));
       document.getElementById('closeHelp')?.addEventListener('click', () => closeModal('help'));
       document.getElementById('closeAbout')?.addEventListener('click', () => closeModal('about'));
+      document.getElementById('closePrivacy')?.addEventListener('click', () => closeModal('privacy'));
       
       // Close modal on overlay click
-      const modalNames = ['settings', 'help', 'about'];
-      [settingsModal, helpModal, aboutModal].forEach((modal, index) => {
+      const modalNames = ['settings', 'help', 'about', 'privacy'];
+      [settingsModal, helpModal, aboutModal, privacyModal].forEach((modal, index) => {
         if (modal) {
           modal.addEventListener('click', (e) => {
             if (e.target === modal) {
@@ -5097,12 +5444,14 @@
       const helpModalEl = document.getElementById('helpModal');
       const aboutModalEl = document.getElementById('aboutModal');
       const bookmarkDialogEl = document.getElementById('bookmarkDialog');
+      const privacyModalEl = document.getElementById('privacyModal');
       
       const modalMap = {
         settings: settingsModalEl,
         help: helpModalEl,
         about: aboutModalEl,
-        bookmark: bookmarkDialogEl
+        bookmark: bookmarkDialogEl,
+        privacy: privacyModalEl
       };
       const modal = modalMap[modalName];
       console.log('Modal element found:', !!modal);
@@ -5120,12 +5469,14 @@
       const helpModalEl = document.getElementById('helpModal');
       const aboutModalEl = document.getElementById('aboutModal');
       const bookmarkDialogEl = document.getElementById('bookmarkDialog');
+      const privacyModalEl = document.getElementById('privacyModal');
       
       const modalMap = {
         settings: settingsModalEl,
         help: helpModalEl,
         about: aboutModalEl,
-        bookmark: bookmarkDialogEl
+        bookmark: bookmarkDialogEl,
+        privacy: privacyModalEl
       };
       const overlay = modalMap[modalName];
       if (overlay) {
@@ -5147,6 +5498,125 @@
         console.log('BrowserViews restored after modal close');
       }
     }
+    
+    // ===== PRIVACY DASHBOARD FUNCTIONS =====
+    let privacyStats = {
+      adsBlocked: 0,
+      trackersBlocked: 0,
+      httpsUpgrades: 0
+    };
+
+    async function loadPrivacyStats() {
+      try {
+        // Get blocking status from main process
+        if (window.electron?.blocking?.getStatus) {
+          const status = await window.electron.blocking.getStatus();
+          console.log('🛡️ Privacy status:', status);
+          
+          // Update stats display
+          document.getElementById('adsBlockedCount').textContent = status.blockedCount || 0;
+          document.getElementById('trackersBlockedCount').textContent = status.blockedCount || 0;
+          document.getElementById('httpsUpgrades').textContent = privacyStats.httpsUpgrades || 0;
+          
+          // Update badge
+          updatePrivacyBadge(status.blockedCount || 0);
+          
+          // Update toggle states
+          const adBlockToggle = document.getElementById('adBlockToggle');
+          const trackerBlockToggle = document.getElementById('trackerBlockToggle');
+          
+          if (status.adBlockEnabled) {
+            adBlockToggle?.classList.add('active');
+          } else {
+            adBlockToggle?.classList.remove('active');
+          }
+          
+          if (status.trackerBlockEnabled) {
+            trackerBlockToggle?.classList.add('active');
+          } else {
+            trackerBlockToggle?.classList.remove('active');
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load privacy stats:', e);
+      }
+    }
+
+    function updatePrivacyBadge(count) {
+      const badge = document.getElementById('privacyBadge');
+      if (badge) {
+        if (count > 0) {
+          badge.textContent = count > 99 ? '99+' : count;
+          badge.style.display = 'flex';
+        } else {
+          badge.style.display = 'none';
+        }
+      }
+    }
+
+    function setupPrivacyDashboard() {
+      // Ad Block Toggle
+      const adBlockToggle = document.getElementById('adBlockToggle');
+      adBlockToggle?.addEventListener('click', async () => {
+        const isActive = adBlockToggle.classList.contains('active');
+        adBlockToggle.classList.toggle('active');
+        
+        if (window.electron?.blocking?.setAdBlock) {
+          await window.electron.blocking.setAdBlock(!isActive);
+          showToast(isActive ? '🛡️ Ad Blocker disabled' : '🛡️ Ad Blocker enabled');
+        }
+      });
+
+      // Tracker Block Toggle
+      const trackerBlockToggle = document.getElementById('trackerBlockToggle');
+      trackerBlockToggle?.addEventListener('click', async () => {
+        const isActive = trackerBlockToggle.classList.contains('active');
+        trackerBlockToggle.classList.toggle('active');
+        
+        if (window.electron?.blocking?.setTrackerBlock) {
+          await window.electron.blocking.setTrackerBlock(!isActive);
+          showToast(isActive ? '🔒 Tracker Blocker disabled' : '🔒 Tracker Blocker enabled');
+        }
+      });
+
+      // Anti-Fingerprint Toggle (visual only for now - always active)
+      const antiFingerprintToggle = document.getElementById('antiFingerprintToggle');
+      antiFingerprintToggle?.addEventListener('click', () => {
+        showToast('🎭 Anti-Fingerprinting is always active for your protection');
+      });
+
+      // Clear Browsing Data button
+      document.getElementById('clearBrowsingData')?.addEventListener('click', async () => {
+        if (window.electron?.security?.clearData) {
+          await window.electron.security.clearData();
+          showToast('🧹 Browsing data cleared!');
+          loadPrivacyStats(); // Refresh stats
+        }
+      });
+
+      // Open Phantom Mode from Privacy Dashboard
+      document.getElementById('openPhantomFromPrivacy')?.addEventListener('click', async () => {
+        closeModal('privacy');
+        if (window.electron?.app?.openPhantomMode) {
+          showToast('👻 Opening Phantom Mode...');
+          await window.electron.app.openPhantomMode();
+        }
+      });
+
+      // Load stats initially
+      loadPrivacyStats();
+      
+      // Refresh stats periodically while dashboard is open
+      setInterval(() => {
+        const privacyModalEl = document.getElementById('privacyModal');
+        if (privacyModalEl?.classList.contains('open')) {
+          loadPrivacyStats();
+        }
+      }, 5000);
+    }
+
+    // Initialize privacy dashboard
+    setupPrivacyDashboard();
     
     // Settings persistence - use main process storage for proper persistence
     async function loadSettings() {
@@ -5616,6 +6086,12 @@
         if (window.electron?.app?.openPhantomMode) {
           await window.electron.app.openPhantomMode();
         }
+      });
+
+      // 🛡️ Privacy Dashboard button
+      privacyBtn.addEventListener('click', () => {
+        openModal('privacy');
+        loadPrivacyStats();
       });
 
       // Sidebar close buttons

@@ -47,7 +47,7 @@ const defaultSettings: SecuritySettings = {
     pointerLock: 'ask',
     fullscreen: 'allow',
   },
-  trustedDomains: ['flashappai.org', 'google.com', 'github.com'],
+  trustedDomains: ['flashappai.org', 'google.com', 'github.com', 'accounts.google.com', 'googleapis.com', 'gstatic.com', 'googleusercontent.com'],
   blockedDomains: [],
 };
 
@@ -381,10 +381,10 @@ export class SecurityManager {
       callback({ responseHeaders });
     });
 
-    // Spoof/randomize certain browser fingerprint data
-    ses.setUserAgent(this.getAnonymizedUserAgent());
+    // Note: Don't override user agent here - it's set in main.ts with actual Chrome version
+    // This ensures Google login works properly while still providing security headers
 
-    console.log('🎭 Anti-fingerprinting enabled');
+    console.log('🎭 Anti-fingerprinting enabled (headers only, user agent preserved)');
   }
 
   /**

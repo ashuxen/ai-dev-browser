@@ -167,6 +167,11 @@ contextBridge.exposeInMainWorld('electron', {
     setTrackerBlock: (enabled: boolean) => ipcRenderer.invoke('blocking:set-tracker-block', enabled),
   },
 
+  // Security
+  security: {
+    clearData: () => ipcRenderer.invoke('security:clear-data'),
+  },
+
   // Settings management
   settings: {
     getAll: () => ipcRenderer.invoke('settings:get-all'),
